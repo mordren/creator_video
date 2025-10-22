@@ -10,12 +10,7 @@ from pathlib import Path
 from typing import Dict, Any
 
 def carregar_config_canal(canal: str) -> Dict[str, Any]:
-    """
-    Carrega dinamicamente o config.py de um canal específico
-    """
     canal_path = Path(f"canais/{canal}")
-    
-    
 
     if not canal_path.exists():
         raise ValueError(f"Canal '{canal}' não encontrado em {canal_path}")
@@ -37,8 +32,6 @@ def carregar_config_canal(canal: str) -> Dict[str, Any]:
         if key.isupper() and not key.startswith('_'):
             config[key] = getattr(config_module, key)
     
-    # ✅ CORREÇÃO: Adiciona PASTA_CANAL e PASTA_BASE explicitamente
-    # Estas são as chaves ESSENCIAIS que o código principal espera
     config['PASTA_CANAL'] = canal_path
     config['PASTA_BASE'] = getattr(config_module, 'PASTA_BASE', 
                                   Path(__file__).parent.parent / "conteudo_gerado")
@@ -52,8 +45,7 @@ def carregar_config_canal(canal: str) -> Dict[str, Any]:
     
     return config
 
-def listar_canais_disponiveis() -> list:
-    """Lista todos os canais disponíveis"""
+def listar_canais_disponiveis() -> list:    
     canais_path = Path("canais")
     if not canais_path.exists():
         return []

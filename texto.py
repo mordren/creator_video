@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Sistema unificado para gerar roteiros de qualquer canal
-"""
-
 import io
 import os
 import re
@@ -29,7 +25,6 @@ def proximo_id(pasta_base: Path) -> str:
     return str(max(numeros) + 1)
 
 def _higieniza_texto(s: str) -> str:
-    """Remove formatação que interfere com TTS"""
     if not s:
         return s
 
@@ -143,17 +138,14 @@ def processar_resposta(texto: str, schema: dict, config: dict, tema: tuple) -> d
         try:
             dados = json.loads(texto_limpo)
         except json.JSONDecodeError:
-            # Fallback: cria JSON básico com o texto
             dados = {}
             chave_texto = f"texto_{config.get('IDIOMA', 'pt')}"
             dados[chave_texto] = _higieniza_texto(texto)
-        
-        # Aplica higienização a campos de texto
+
         for campo, valor in dados.items():
             if isinstance(valor, str) and campo.startswith('texto_'):
                 dados[campo] = _higieniza_texto(valor)
         
-        # Valida campos obrigatórios
         for campo in schema.get('campos_obrigatorios', []):
             if campo not in dados:
                 dados[campo] = ""
@@ -179,28 +171,21 @@ def processar_resposta(texto: str, schema: dict, config: dict, tema: tuple) -> d
     
     return dados
 
-# -------------------------- Geração Principal ------------------------------
 def gerar_roteiro(canal: str) -> tuple:
     """Gera roteiro para qualquer canal"""
-    # Carrega configuração do canal
     config = carregar_config_canal(canal)
 
-    # Carrega componentes modulares
     agente = carregar_agente(config)
     schema = carregar_schema(config)
     temas = carregar_temas(config)
     
-    # Configura LLM
     genai.configure(api_key=os.environ.get("GEMINI_API_KEY", config.get('API_KEY')))
     model = genai.GenerativeModel(config.get('MODEL_NAME', 'gemini-2.5-flash'))
 
-    # Seleciona tema aleatório
     tema = random.choice(temas)
     
-    # Constrói prompt final
     prompt = construir_prompt_final(agente, schema, config, tema)
 
-    # Gera conteúdo
     response = model.generate_content(
         prompt,
         generation_config=genai.types.GenerationConfig(

@@ -1,3 +1,4 @@
+from providers.gemini_tts import GeminiTTSProvider
 from .edge_tts import EdgeTTSProvider
 
 def create_tts_provider(provider_name: str):
@@ -15,6 +16,7 @@ def create_tts_provider(provider_name: str):
     """
     providers = {
         'edge': EdgeTTSProvider,
+        'gemini' : GeminiTTSProvider,
     }
     
     provider_name = provider_name.lower().strip()
@@ -26,4 +28,4 @@ def create_tts_provider(provider_name: str):
     return providers[provider_name]()
 
 # Exportações públicas
-__all__ = ['create_tts_provider', 'EdgeTTSProvider']
+__all__ = ['create_tts_provider', 'EdgeTTSProvider', 'GeminiTTSProvider']

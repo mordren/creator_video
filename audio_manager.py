@@ -11,18 +11,10 @@ try:
     from providers import create_tts_provider
 except ImportError as e:
     print(f"❌ Erro de importação: {e}")
-    # Tenta import absoluto como fallback
-    try:
-        import read_config
-        carregar_config_canal = read_config.carregar_config_canal
-        
-        from providers import create_tts_provider
-    except ImportError:
-        print("❌ Não foi possível importar os módulos necessários")
-        sys.exit(1)
+    sys.exit(1)
 
 class AudioManager:
-    """Gerenciador central de áudio - Versão simplificada e modular"""
+    """Gerenciador central de áudio - Versão simplificada"""
     
     def _carregar_texto_do_roteiro(self, roteiro_path: Path, config: Dict[str, Any]) -> tuple:
         """Carrega o texto do roteiro de forma compatível"""
@@ -90,7 +82,13 @@ class AudioManager:
         print(f"🎵 Gerando áudio com {provider.upper()}...")
         print(f"📝 Texto: {len(texto)} caracteres")
         print(f"🎯 Idioma: {dados.get('idioma', 'N/A')}")
-        print(f"🔊 Voz: {config.get('EDGE_TTS_VOICE', 'N/A')}")
+        
+        # Mostra a voz correta baseada no provedor
+        if provider == 'gemini':
+            print(f"🔊 Voz: {config.get('GEMINI_TTS_VOICE', 'N/A')}")
+        else:
+            print(f"🔊 Voz: {config.get('EDGE_TTS_VOICE', 'N/A')}")
+            
         print(f"💾 Saída: {arquivo_audio}")
         
         # Gera áudio
@@ -101,7 +99,11 @@ class AudioManager:
             dados['audio_gerado'] = True
             dados['arquivo_audio'] = str(arquivo_audio)
             dados['tts_provider'] = provider
-            dados['voz_tts'] = config.get('EDGE_TTS_VOICE', 'N/A')
+            
+            if provider == 'gemini':
+                dados['voz_tts'] = config.get('GEMINI_TTS_VOICE', 'N/A')
+            else:
+                dados['voz_tts'] = config.get('EDGE_TTS_VOICE', 'N/A')
             
             # Adiciona informações de legendas se aplicável
             if provider == 'edge' and config.get('EDGE_TTS_LEGENDAS', True):

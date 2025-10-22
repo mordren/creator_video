@@ -23,17 +23,29 @@ AGENTE_FILE = "agente.txt"
 SCHEMA_FILE = "schema.json"
 TEMAS_FILE = "temas.txt"
 
-# -------------------------- TTS ----------------------------------------------------
-TTS_PROVIDER = "edge"
+# -------------------------- TTS - CONFIGURAÇÕES MULTIPROVEDOR ----------------------
+TTS_PROVIDER = "gemini"  # edge, google, azure, gemini
+
+# Edge TTS (gratuito - seu provedor atual)
 EDGE_TTS_VOICE = "pt-BR-AntonioNeural"
 EDGE_TTS_RATE = "+15%"
 EDGE_TTS_PITCH = "-2Hz"
 EDGE_TTS_LEGENDAS = True
 
-# Compatibilidade
-VOZ_TTS = "pt-BR-AntonioNeural"
-TAXA_TTS = "+15%"
-TOM_TTS = "-2Hz"
+# Gemini TTS (premium)
+GEMINI_TTS_VOICE = "Algenib"  # ou outra voz disponível
+GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts"
+GEMINI_TTS_BITRATE = "192k"
+GEMINI_TTS_PROMPT = (
+    "Leia em tom sombrio e misterioso, sem muita animação, ritmo acelerado (~1.40x), como se fosse um short de youtube "
+    "sem pausas longas. Narre em português do Brasil, com fluidez contínua, "
+    "sem barulhos de respiração e sem hesitação."
+)
+
+# Google TTS (gratuito)
+GOOGLE_TTS_LANG = "pt"
+GOOGLE_TTS_TLD = "com.br"
+GOOGLE_TTS_SLOW = False
 
 # -------------------------- Vídeo --------------------------------------------------
 RESOLUCAO = "720x1280"

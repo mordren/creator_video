@@ -53,3 +53,5 @@ conteudo_gerado/
 
 # Arquivos de cache
 .cache/
+
+.env

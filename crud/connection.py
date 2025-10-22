@@ -44,7 +44,7 @@ def get_database_url():
 # Cria a engine de conexão
 engine = create_engine(
     get_database_url(),
-    echo=True,  # Define como True para ver queries SQL no console (útil para debug)
+    echo=False,  # Mude para False para silenciar as queries SQL
     pool_size=10,
     max_overflow=20
 )
@@ -80,3 +80,14 @@ def criar_tabelas():
 def get_session():
     """Retorna uma sessão do banco de dados"""
     return Session(engine)
+
+def recriar_tabelas():
+    """Recria todas as tabelas (CUIDADO: perde dados existentes!)"""
+    try:
+        SQLModel.metadata.drop_all(engine)
+        SQLModel.metadata.create_all(engine)
+        print("✅ Tabelas recriadas com sucesso!")
+        return True
+    except Exception as e:
+        print(f"❌ Erro ao recriar tabelas: {e}")
+        return False

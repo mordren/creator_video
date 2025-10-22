@@ -14,9 +14,9 @@ PASTA_VIDEOS = Path(r"E:\Canal Dark\Vídeos Automáticos\Vídeos")
 # -------------------------- Parâmetros Comuns --------------------------------------
 IDIOMA = "pt"
 TAMANHO_MAX = 135
-API_KEY = "SUA_API_KEY_DO_GEMINI"
-LLM_PROVIDER = "gemini"
 MODEL_NAME = "gemini-2.5-flash"
+TEMPERATURE = 0.8
+TOP_P = 0.9
 
 # -------------------------- Agente -------------------------------------------------
 AGENTE_FILE = "agente.txt"
@@ -24,7 +24,7 @@ SCHEMA_FILE = "schema.json"
 TEMAS_FILE = "temas.txt"
 
 # -------------------------- TTS - CONFIGURAÇÕES MULTIPROVEDOR ----------------------
-TTS_PROVIDER = "gemini"  # edge, google, azure, gemini
+TTS_PROVIDER = "edge"  # edge, google, azure, gemini
 
 # Edge TTS (gratuito - seu provedor atual)
 EDGE_TTS_VOICE = "pt-BR-AntonioNeural"
@@ -42,13 +42,9 @@ GEMINI_TTS_PROMPT = (
     "sem barulhos de respiração e sem hesitação."
 )
 
-# Google TTS (gratuito)
-GOOGLE_TTS_LANG = "pt"
-GOOGLE_TTS_TLD = "com.br"
-GOOGLE_TTS_SLOW = False
-
 # -------------------------- Vídeo --------------------------------------------------
 RESOLUCAO = "720x1280"
 FPS = 60
 FONTE = "Montserrat-Black"
 TAMANHO_FONTE = 90
+

@@ -43,14 +43,58 @@ class DatabaseManager:
             return session.exec(statement).all()
     
     # --- Operações para Roteiros ---
-    def criar_roteiro(self, **dados) -> Roteiro:
+    def criar_roteiro(self, 
+                    id_video: str,
+                    titulo_a: str = None,
+                    titulo_b: str = None,
+                    titulo_escolhido: str = None,
+                    texto: str = None,
+                    descricao: str = None,
+                    tags: str = None,
+                    thumb_a: str = "",
+                    thumb_b: str = "", 
+                    thumb_escolhida: str = "",
+                    canal_id: int = None,
+                    arquivo_audio: str = None,
+                    tts_provider: str = None,
+                    voz_tts: str = None,
+                    audio_gerado: bool = False,
+                    arquivo_legenda: str = None,
+                    vertical: bool = True) -> Roteiro:
+        
         with Session(self.engine) as session:
-            roteiro = Roteiro(**dados)
+            # Garante valores padrão para evitar NULL
+            roteiro = Roteiro(
+                id_video=id_video,
+                titulo_a=titulo_a or "",
+                titulo_b=titulo_b or "",
+                titulo_escolhido=titulo_escolhido or "",
+                texto=texto or "",
+                descricao=descricao or "",
+                tags=tags or "",
+                thumb_a=thumb_a or "",
+                thumb_b=thumb_b or "",
+                thumb_escolhida=thumb_escolhida or "",
+                canal_id=canal_id,
+                arquivo_audio=arquivo_audio or "",  # ✅ String vazia em vez de None
+                tts_provider=tts_provider or "",    # ✅ String vazia em vez de None
+                voz_tts=voz_tts or "",              # ✅ String vazia em vez de None
+                audio_gerado=audio_gerado,
+                arquivo_legenda=arquivo_legenda or "",  # ✅ String vazia em vez de None
+                vertical=vertical
+            )
+            
             session.add(roteiro)
             session.commit()
             session.refresh(roteiro)
             return roteiro
-    
+        
+    def buscar_roteiro_por_id_video(self, id_video: str) -> Optional[Roteiro]:
+        """Busca roteiro pelo ID único do vídeo"""
+        with Session(self.engine) as session:
+            statement = select(Roteiro).where(Roteiro.id_video == id_video)
+            return session.exec(statement).first()
+        
     def buscar_roteiro(self, roteiro_id: int) -> Optional[Roteiro]:
         with Session(self.engine) as session:
             return session.get(Roteiro, roteiro_id)
@@ -78,14 +122,16 @@ class DatabaseManager:
                 return True
             return False
     
-    def atualizar_roteiro_audio(self, db_id: int, arquivo_audio: str, provider: str) -> bool:
-        """Atualiza informações de áudio do roteiro"""
+    def atualizar_roteiro_audio(self, id_roteiro: int, arquivo_audio: str, tts_provider: str, voz_tts: str, arquivo_legenda: str = None):
+        """Atualiza informações de áudio do roteiro incluindo a voz TTS e legenda"""
         with Session(self.engine) as session:
-            roteiro = session.get(Roteiro, db_id)
+            roteiro = session.get(Roteiro, id_roteiro)
             if roteiro:
                 roteiro.arquivo_audio = arquivo_audio
-                roteiro.tts_provider = provider
-                roteiro.audio_gerado = True
+                roteiro.tts_provider = tts_provider
+                roteiro.voz_tts = voz_tts
+                if arquivo_legenda:
+                    roteiro.arquivo_legenda = arquivo_legenda
                 session.commit()
                 return True
             return False

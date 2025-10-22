@@ -1,31 +1,39 @@
-from providers.gemini_tts import GeminiTTSProvider
-from .edge_tts import EdgeTTSProvider
+# providers/__init__.py
+import os
+from .base_texto import make_provider, ModelParams
 
-def create_tts_provider(provider_name: str):
-    """
-    Factory function para criar instâncias de provedores TTS
+def create_text_provider(provider_name: str = None, **kwargs):
+    """Factory compatível com o sistema de registry"""
+    provider_name = (provider_name or "gemini").lower()
     
-    Args:
-        provider_name: Nome do provedor ('edge')
-    
-    Returns:
-        Instância do provedor TTS
-        
-    Raises:
-        ValueError: Se o provedor não for suportado
-    """
-    providers = {
-        'edge': EdgeTTSProvider,
-        'gemini' : GeminiTTSProvider,
-    }
-    
-    provider_name = provider_name.lower().strip()
-    
-    if provider_name not in providers:
-        supported = ", ".join(f"'{p}'" for p in providers.keys())
-        raise ValueError(f"Provedor TTS não suportado: '{provider_name}'. Provedores disponíveis: {supported}")
-    
-    return providers[provider_name]()
+    # Usa o sistema de registry existente
+    return make_provider(provider_name, **kwargs)
 
-# Exportações públicas
-__all__ = ['create_tts_provider', 'EdgeTTSProvider', 'GeminiTTSProvider']
+def create_tts_provider(provider_name: str = None, **kwargs):
+    """Factory simples para providers de TTS"""
+    provider_name = (provider_name or "edge").lower()
+    
+    if provider_name == "edge":
+        from .edge_tts import EdgeTTSProvider
+        return EdgeTTSProvider()
+    
+    if provider_name == "gemini":
+        from .gemini_tts import GeminiTTSProvider
+        api_key = kwargs.get('api_key') or os.getenv('GEMINI_API_KEY')
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY não encontrada para TTS")
+        return GeminiTTSProvider()
+    
+    raise ValueError(f"TTS Provider '{provider_name}' não suportado")
+
+# Exporta também as funções do sistema de registry
+from .base_texto import register_provider, TextoProvider
+
+__all__ = [
+    'create_text_provider', 
+    'create_tts_provider',
+    'make_provider',
+    'register_provider', 
+    'TextoProvider',
+    'ModelParams'
+]

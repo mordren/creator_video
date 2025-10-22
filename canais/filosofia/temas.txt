@@ -1,30 +1,30 @@
-Nietzsche, viver sem propósito aparente,
-Camus, sentir que nada faz sentido,
-Sartre, a angústia de ser livre,
-Estoicismo, controlar o que não depende de você,
-Schopenhauer, sofrer por desejar demais,
-Frankl, encontrar sentido em tempos difíceis,
-Adler, comparar-se o tempo todo,
-Maquiavel, usar o poder nas relações do dia a dia,
-Epicuro, ter medo de perder o que ama,
-Jung, reconhecer o lado sombrio em si mesmo,
-Nietzsche, buscar autenticidade num mundo padronizado,
-Camus, enfrentar o tédio e a rotina,
-Sartre, tomar decisões sem garantias,
-Estoicismo, lidar com a raiva e a frustração,
-Schopenhauer, esperar demais dos outros,
-Adler, viver tentando agradar todo mundo,
-Frankl, achar propósito em meio ao caos,
-Maquiavel, ser sincero num ambiente falso,
-Epicuro, buscar prazer sem cair no vazio,
-Jung, lidar com sonhos e símbolos do inconsciente,
-Nietzsche, superar o medo de ser julgado,
-Camus, viver o absurdo com leveza,
-Sartre, fugir da responsabilidade das próprias escolhas,
-Estoicismo, aceitar o que não dá pra mudar,
-Schopenhauer, repetir os mesmos erros por desejo,
-Adler, ter coragem de ser imperfeito,
-Frankl, transformar dor em propósito,
-Maquiavel, entender o jogo social sem se perder,
-Epicuro, viver com menos e ainda ser feliz,
-Jung, aceitar a própria sombra
+viver sem propósito aparente, Nietzsche
+sentir que nada faz sentido, Camus
+a angústia de ser livre, Sartre
+controlar o que não depende de você, Estoicismo
+sofrer por desejar demais, Schopenhauer
+encontrar sentido em tempos difíceis, Frankl
+comparar-se o tempo todo, Adler
+usar o poder nas relações do dia a dia, Maquiavel
+ter medo de perder o que ama, Epicuro
+reconhecer o lado sombrio em si mesmo, Jung
+buscar autenticidade num mundo padronizado, Nietzsche
+enfrentar o tédio e a rotina, Camus
+tomar decisões sem garantias, Sartre
+lidar com a raiva e a frustração, Estoicismo
+esperar demais dos outros, Schopenhauer
+viver tentando agradar todo mundo, Adler
+achar propósito em meio ao caos, Frankl
+ser sincero num ambiente falso, Maquiavel
+buscar prazer sem cair no vazio, Epicuro
+lidar com sonhos e símbolos do inconsciente, Jung
+superar o medo de ser julgado, Nietzsche
+viver o absurdo com leveza, Camus
+fugir da responsabilidade das próprias escolhas, Sartre
+aceitar o que não dá pra mudar, Estoicismo
+repetir os mesmos erros por desejo, Schopenhauer
+ter coragem de ser imperfeito, Adler
+transformar dor em propósito, Frankl
+entender o jogo social sem se perder, Maquiavel
+viver com menos e ainda ser feliz, Epicuro
+aceitar a própria sombra, Jung

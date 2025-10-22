@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Dict, Any
 import edge_tts
 
-from .base import TTSProvider
+from .base_audio import TTSProvider
 
 class EdgeTTSProvider(TTSProvider):
     """Provedor Microsoft Edge TTS - Gratuito e com suporte a legendas SRT"""

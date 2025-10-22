@@ -40,8 +40,14 @@ Diretrizes:
 - Estilo Maquiavélico, psicológico e filosófico, tom de poder e lucidez
 - Sempre centrado na palavra-chave e compatível com o roteiro
 
-Retorne APENAS o JSON válido com as chaves: {campos_obrigatorios}
+Estrutura EXATA do JSON:
+{campos_obrigatorios}
+
 NÃO inclua nenhum texto adicional, explicações ou blocos de código markdown.
+NÃO USE ```json ou qualquer formatação markdown. Apenas o JSON puro.
 
 Tema: {tema}
 Autor: {autor}
+
+Exemplo de uma resposta:
+{exemplo_resposta}

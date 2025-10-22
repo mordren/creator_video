@@ -12,9 +12,7 @@ PASTA_VIDEOS = Path(r"E:\Canal Religioso\Vídeos")
 # -------------------------- Parâmetros Comuns --------------------------------------
 IDIOMA = "en"
 TAMANHO_MAX = 3650
-API_KEY = "SUA_API_KEY_DO_GEMINI"
-LLM_PROVIDER = "gemini"
-MODEL_NAME = "gemini-2.5-flash"
+
 
 # -------------------------- Agente -------------------------------------------------
 AGENTE_FILE = "agente.txt"      # Prompt principal do agente
@@ -22,9 +20,20 @@ SCHEMA_FILE = "schema.json"     # Definição do formato de saída
 TEMAS_FILE = "temas.txt"        # Lista de temas
 
 # -------------------------- TTS ----------------------------------------------------
-VOZ_TTS = "en-US-AndrewNeural"
-TAXA_TTS = "-6%"
-TOM_TTS = "+0Hz"
+EDGE_TTS_VOICE = "en-US-AndrewNeural"
+EDGE_TTS_RATE = "-6%"
+EDGE_TTS_PITCH = "+0Hz"
+EDGE_TTS_LEGENDAS = True
+
+# Gemini TTS (premium)
+GEMINI_TTS_VOICE = "Algenib"  # ou outra voz disponível
+GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts"
+GEMINI_TTS_BITRATE = "192k"
+GEMINI_TTS_PROMPT = (
+    "Leia em refletivo e informativo, como se fosse uma narração de um vídeo de inspiração e restropecção"
+    "sem pausas longas. Inglês americano, com fluidez contínua, "
+    "sem barulhos de respiração e sem hesitação."
+)
 
 # -------------------------- Vídeo --------------------------------------------------
 RESOLUCAO = "1280x720"

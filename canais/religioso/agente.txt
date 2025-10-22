@@ -68,8 +68,12 @@ Return ONLY JSON with the following schema:
 
 Do not include extra fields, comments, code fences or notes outside JSON.
 
+
 SELF-REVIEW
 
 Accessible language? Compassionate tone? Good cadence for TTS? Respects "broad Christianity"? Coherent implicit duration?
 Title follows Title Engine (anatomy, style, length, series tag, no categorical promises)? Hooks and description aligned?
 Always check the text size must have at least {TAMANHO_MAX}
+
+Example:
+{exemplo_resposta}

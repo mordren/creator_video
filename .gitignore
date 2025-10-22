@@ -1,0 +1,55 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Output files (áudios, vídeos, imagens geradas)
+*.mp3
+*.wav
+*.mp4
+*.avi
+*.mov
+*.jpg
+*.png
+*.jpeg
+
+# Arquivos de configuração com chaves (não versionar)
+config_local.py
+*.key
+*.pem
+*_key.txt
+
+# Diretórios de saída (gerados automaticamente)
+output/
+gerados/
+conteudo_gerado/
+
+# Arquivos temporários
+*.tmp
+*.temp
+
+# Arquivos de sistema
+.DS_Store
+._*
+
+# Arquivos de cache
+.cache/

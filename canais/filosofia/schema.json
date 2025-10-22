@@ -1,0 +1,8 @@
+{
+  "tipo": "json",
+  "campos_obrigatorios": ["texto_pt", "titulo", "descricao", "thumb", "tags"],
+  "placeholder_tema": "{tema}",
+  "placeholder_autor": "{autor}",
+  "placeholder_tamanho": "{TAMANHO_MAX}",
+  "exemplo_resposta": "{\"texto_pt\": \"Texto do roteiro aqui...\", \"descricao\": \"Descrição curta\", \"thumb\": \"palavra1 palavra2 palavra3\", \"tags\": [\"filosofia\", \"vida\", \"reflexão\"]}"
+}

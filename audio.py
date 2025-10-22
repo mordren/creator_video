@@ -5,15 +5,33 @@ Sistema de áudio do Creator Video
 """
 
 import sys
+import os
 import argparse
 from pathlib import Path
 
-from audio import AudioManager
+# Adiciona o diretório atual ao path do Python
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+try:
+    from audio import AudioManager
+
+except ImportError as e:
+    print(f"❌ Erro ao importar AudioManager: {e}")
+    print("📁 Estrutura atual:")
+    for root, dirs, files in os.walk("."):
+        level = root.replace(".", "").count(os.sep)
+        indent = " " * 2 * level
+        print(f"{indent}{os.path.basename(root)}/")
+        subindent = " " * 2 * (level + 1)
+        for file in files:
+            if file.endswith(".py"):
+                print(f"{subindent}{file}")
+    sys.exit(1)
 
 def main():
     parser = argparse.ArgumentParser(description='Gerar áudio para roteiros - Creator Video')
     parser.add_argument('roteiro', help='Caminho para o arquivo JSON do roteiro')
-    parser.add_argument('--canal', help='Nome do canal', required=True)
+    parser.add_argument('--canal', required=True, help='Nome do canal')
     parser.add_argument('--provider', help='Provedor TTS (edge)')
     
     args = parser.parse_args()

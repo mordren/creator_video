@@ -1,8 +1,17 @@
+# creator_video/audio_manager.py
 import json
+import sys
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
-from read_config import carregar_config_canal
+# Corrige o import do read_config
+try:
+    from read_config import carregar_config_canal
+except ImportError:
+    # Adiciona o diretório pai ao path
+    sys.path.append(str(Path(__file__).parent.parent))
+    from read_config import carregar_config_canal
+
 from .providers import create_tts_provider
 
 class AudioManager:
@@ -44,7 +53,11 @@ class AudioManager:
         """Gera áudio para um roteiro"""
         
         # Carrega configuração do canal
-        config = carregar_config_canal(canal)
+        try:
+            config = carregar_config_canal(canal)
+        except Exception as e:
+            print(f"❌ Erro ao carregar configuração do canal '{canal}': {e}")
+            return False
         
         # Carrega texto do roteiro
         texto, dados = self._carregar_texto_do_roteiro(roteiro_path, config)

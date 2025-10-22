@@ -8,7 +8,7 @@ from pathlib import Path
 
 # -------------------------- Pastas -------------------------------------------------
 PASTA_BASE = Path(r"E:\Canal Dark\Vídeos Automáticos")
-PASTA_CANAL = Path(r"C:\Users\mordren\Documents\creator\canais\filosofia")
+PASTA_CANAL = Path(__file__).parent  # Pasta atual do canal
 PASTA_VIDEOS = Path(r"E:\Canal Dark\Vídeos Automáticos\Vídeos")
 
 # -------------------------- Parâmetros Comuns --------------------------------------
@@ -19,11 +19,18 @@ LLM_PROVIDER = "gemini"
 MODEL_NAME = "gemini-2.5-flash"
 
 # -------------------------- Agente -------------------------------------------------
-AGENTE_FILE = "agente.txt"      # Prompt principal do agente
-SCHEMA_FILE = "schema.json"     # Definição do formato de saída
-TEMAS_FILE = "temas.txt"        # Lista de temas
+AGENTE_FILE = "agente.txt"
+SCHEMA_FILE = "schema.json"
+TEMAS_FILE = "temas.txt"
 
 # -------------------------- TTS ----------------------------------------------------
+TTS_PROVIDER = "edge"
+EDGE_TTS_VOICE = "pt-BR-AntonioNeural"
+EDGE_TTS_RATE = "+15%"
+EDGE_TTS_PITCH = "-2Hz"
+EDGE_TTS_LEGENDAS = True
+
+# Compatibilidade
 VOZ_TTS = "pt-BR-AntonioNeural"
 TAXA_TTS = "+15%"
 TOM_TTS = "-2Hz"

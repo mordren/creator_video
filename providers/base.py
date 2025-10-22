@@ -7,4 +7,15 @@ class TTSProvider(ABC):
     
     @abstractmethod
     def sintetizar(self, texto: str, output_path: Path, config: Dict[str, Any]) -> bool:
+        """
+        Sintetiza texto em áudio
+        
+        Args:
+            texto: Texto para sintetizar
+            output_path: Caminho onde salvar o arquivo de áudio
+            config: Configurações do canal
+            
+        Returns:
+            True se bem-sucedido, False caso contrário
+        """
         pass

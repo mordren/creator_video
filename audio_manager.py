@@ -1,18 +1,25 @@
-# creator_video/audio_manager.py
 import json
 import sys
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-# Corrige o import do read_config
+# Corrige imports - adiciona o caminho atual ao sys.path
+sys.path.append(str(Path(__file__).parent))
+
 try:
     from read_config import carregar_config_canal
-except ImportError:
-    # Adiciona o diretório pai ao path
-    sys.path.append(str(Path(__file__).parent.parent))
-    from read_config import carregar_config_canal
-
-from .providers import create_tts_provider
+    from providers import create_tts_provider
+except ImportError as e:
+    print(f"❌ Erro de importação: {e}")
+    # Tenta import absoluto como fallback
+    try:
+        import read_config
+        carregar_config_canal = read_config.carregar_config_canal
+        
+        from providers import create_tts_provider
+    except ImportError:
+        print("❌ Não foi possível importar os módulos necessários")
+        sys.exit(1)
 
 class AudioManager:
     """Gerenciador central de áudio - Versão simplificada e modular"""

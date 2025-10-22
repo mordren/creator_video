@@ -8,25 +8,10 @@ import sys
 import os
 import argparse
 from pathlib import Path
+from audio_manager import AudioManager
 
 # Adiciona o diretório atual ao path do Python
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-try:
-    from audio_manager import AudioManager
-
-except ImportError as e:
-    print(f"❌ Erro ao importar AudioManager: {e}")
-    print("📁 Estrutura atual:")
-    for root, dirs, files in os.walk("."):
-        level = root.replace(".", "").count(os.sep)
-        indent = " " * 2 * level
-        print(f"{indent}{os.path.basename(root)}/")
-        subindent = " " * 2 * (level + 1)
-        for file in files:
-            if file.endswith(".py"):
-                print(f"{subindent}{file}")
-    sys.exit(1)
 
 def main():
     parser = argparse.ArgumentParser(description='Gerar áudio para roteiros - Creator Video')

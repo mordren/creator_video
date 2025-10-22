@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+Sistema unificado para gerar roteiros de qualquer canal
+"""
+
 import io
 import os
 import re
@@ -15,16 +19,16 @@ sys.stdout = io.TextIOWrapper(sys.stdout.detach(), encoding='utf-8', errors='rep
 
 from read_config import carregar_config_canal, listar_canais_disponiveis
 
-# -------------------------- Funções Utilitárias ----------------------------
-def proximo_id(pasta_base: Path) -> str:
-    existentes = [p.name for p in pasta_base.iterdir()
-                  if p.is_dir() and re.fullmatch(r"\d+", p.name)]
-    if not existentes:
-        return "1"
-    numeros = [int(n) for n in existentes]
-    return str(max(numeros) + 1)
+# Import do DatabaseManager
+try:
+    from crud import DatabaseManager
+except ImportError as e:
+    print(f"⚠️ Aviso: DatabaseManager não disponível - {e}")
+    DatabaseManager = None
 
+# -------------------------- Funções Utilitárias ----------------------------
 def _higieniza_texto(s: str) -> str:
+    """Remove formatação que interfere com TTS"""
     if not s:
         return s
 
@@ -138,14 +142,17 @@ def processar_resposta(texto: str, schema: dict, config: dict, tema: tuple) -> d
         try:
             dados = json.loads(texto_limpo)
         except json.JSONDecodeError:
+            # Fallback: cria JSON básico com o texto
             dados = {}
             chave_texto = f"texto_{config.get('IDIOMA', 'pt')}"
             dados[chave_texto] = _higieniza_texto(texto)
-
+        
+        # Aplica higienização a campos de texto
         for campo, valor in dados.items():
             if isinstance(valor, str) and campo.startswith('texto_'):
                 dados[campo] = _higieniza_texto(valor)
         
+        # Valida campos obrigatórios
         for campo in schema.get('campos_obrigatorios', []):
             if campo not in dados:
                 dados[campo] = ""
@@ -171,21 +178,75 @@ def processar_resposta(texto: str, schema: dict, config: dict, tema: tuple) -> d
     
     return dados
 
+def salvar_no_banco(dados: dict, canal_nome: str, config: dict):
+    """Salva o roteiro no banco de dados e retorna o ID"""
+    if not DatabaseManager:
+        return None
+    
+    try:
+        db = DatabaseManager()
+        
+        # Busca ou cria o canal
+        canal_db = db.buscar_canal_por_nome(canal_nome)
+        if not canal_db:
+            canal_db = db.criar_canal(
+                nome=canal_nome,
+                config_path=str(config['PASTA_CANAL'])
+            )
+        
+        # Prepara dados para o roteiro
+        roteiro_data = {
+            'canal_id': canal_db.id,
+            'titulo_a': dados.get('titulo', dados.get('titulo_en', 'Sem título')),
+            'texto_pt': dados.get('texto_pt', ''),
+            'texto_en': dados.get('texto_en', ''),
+            'descricao': dados.get('descricao', ''),
+            'tags': ', '.join(dados.get('tags', [])) if isinstance(dados.get('tags'), list) else dados.get('tags', ''),
+            'vertical': config.get('RESOLUCAO', '720x1280') == '720x1280',
+            'audio_gerado': False,
+            'voz_tts': dados.get('voz_tts', ''),
+            'tts_provider': config.get('TTS_PROVIDER', 'edge')
+        }
+        
+        # Cria roteiro no banco
+        roteiro_db = db.criar_roteiro(**roteiro_data)
+        print(f"💾 Roteiro salvo no banco com ID: {roteiro_db.id}")
+        
+        return roteiro_db
+        
+    except Exception as e:
+        print(f"⚠️ Aviso: Não foi possível salvar no banco: {e}")
+        return None
+
+def criar_pasta_roteiro(config: dict, roteiro_id: int) -> Path:
+    """Cria pasta para o roteiro baseado no ID do banco"""
+    pasta_base = config['PASTA_BASE']
+    pasta_roteiro = pasta_base / str(roteiro_id)
+    pasta_roteiro.mkdir(parents=True, exist_ok=True)
+    return pasta_roteiro
+
+# -------------------------- Geração Principal ------------------------------
 def gerar_roteiro(canal: str) -> tuple:
     """Gera roteiro para qualquer canal"""
+    # Carrega configuração do canal
     config = carregar_config_canal(canal)
 
+    # Carrega componentes modulares
     agente = carregar_agente(config)
     schema = carregar_schema(config)
     temas = carregar_temas(config)
     
+    # Configura LLM
     genai.configure(api_key=os.environ.get("GEMINI_API_KEY", config.get('API_KEY')))
     model = genai.GenerativeModel(config.get('MODEL_NAME', 'gemini-2.5-flash'))
 
+    # Seleciona tema aleatório
     tema = random.choice(temas)
     
+    # Constrói prompt final
     prompt = construir_prompt_final(agente, schema, config, tema)
 
+    # Gera conteúdo
     response = model.generate_content(
         prompt,
         generation_config=genai.types.GenerationConfig(
@@ -206,17 +267,29 @@ def main():
     parser.add_argument('canal', help='Nome do canal', choices=listar_canais_disponiveis())
     args = parser.parse_args()
 
-    
     # Gera roteiro
     dados, config = gerar_roteiro(args.canal)
     
-    # Cria pasta e salva
-    nova_pasta = config['PASTA_BASE'] / proximo_id(config['PASTA_BASE'])
-    nova_pasta.mkdir(parents=True, exist_ok=True)
+    # Salva no banco de dados PRIMEIRO para obter o ID
+    roteiro_db = salvar_no_banco(dados, args.canal, config)
+    
+    if roteiro_db:
+        # Usa o ID do banco para criar a pasta
+        pasta_roteiro = criar_pasta_roteiro(config, roteiro_db.id)
+        dados['Id'] = roteiro_db.id
+        dados['db_id'] = roteiro_db.id
+        nome_arquivo = f"{roteiro_db.id}.json"
+    else:
+        # Fallback: cria pasta com timestamp se banco não disponível
+        from datetime import datetime
+        timestamp = int(datetime.now().timestamp())
+        pasta_roteiro = criar_pasta_roteiro(config, timestamp)
+        dados['Id'] = timestamp
+        nome_arquivo = f"{timestamp}.json"
+        print("⚠️ Usando timestamp como ID (banco não disponível)")
 
-    dados['Id'] = nova_pasta.name
-    caminho_json = nova_pasta / f"{nova_pasta.name}.json"
-
+    # Salva arquivo JSON
+    caminho_json = pasta_roteiro / nome_arquivo
     with open(caminho_json, "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False, indent=2)
 
@@ -225,12 +298,12 @@ def main():
     palavras_count = len(dados.get(chave_texto, '').split())
     
     print(f"✅ Roteiro {config.get('ESTILO', '')} salvo em: {caminho_json}")
+    if roteiro_db:
+        print(f"💾 Banco de dados: Roteiro ID {roteiro_db.id}")
     print(f"📊 Canal: {dados.get('canal', '')}")
     print(f"📊 Idioma: {dados.get('idioma', 'pt')}")
     print(f"📊 Palavras: {palavras_count}")
     print(f"🔊 Voz TTS: {dados.get('voz_tts', '')}")
-    print(f"--- Conteúdo ---")
-    print(json.dumps(dados, ensure_ascii=False, indent=2))
     
     return caminho_json
 

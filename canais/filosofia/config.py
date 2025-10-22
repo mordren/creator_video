@@ -37,7 +37,7 @@ GEMINI_TTS_VOICE = "Algenib"  # ou outra voz disponível
 GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts"
 GEMINI_TTS_BITRATE = "192k"
 GEMINI_TTS_PROMPT = (
-    "Leia em tom sombrio e misterioso, sem muita animação, ritmo acelerado (~1.40x), como se fosse um short de youtube "
+    "Leia em refletivo e informativo, sem muita animação, ritmo acelerado (~1.40x), como se fosse um short de youtube "
     "sem pausas longas. Narre em português do Brasil, com fluidez contínua, "
     "sem barulhos de respiração e sem hesitação."
 )

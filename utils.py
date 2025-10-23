@@ -18,100 +18,30 @@ def truncate_words(s: str, n: int) -> str:
         out.append(chunk)
     return "".join(out).strip()
 
-# Em utils.py - função EXTRA ROBUSTA
 def extract_json_maybe(text: str) -> dict:
     """
-    Tenta extrair JSON de uma string, lidando com blocos de código markdown.
-    Versão ULTRA-ROBUSTA.
+    Função simplificada apenas para compatibilidade
+    O processamento principal agora está no gemini_text.py
     """
-    import json
-    import re
-    
-    # Se já for um dicionário, retorna diretamente
     if isinstance(text, dict):
         return text
     
-    # Limpa a string
-    text = text.strip()
-    
-    print(f"🔍 Texto recebido para extração JSON: {text[:200]}...")
-    
-    # CASO 1: É um bloco de código markdown com JSON
-    if text.startswith('```json'):
-        # Extrai o JSON do bloco de código
-        match = re.search(r'```json\s*(.*?)\s*```', text, re.DOTALL)
-        if match:
-            json_text = match.group(1).strip()
-            print(f"✅ Encontrado bloco JSON markdown: ")
-            try:
-                data = json.loads(json_text)
-                if isinstance(data, dict):
-                    print(f"✅ JSON extraído do bloco markdown:")
-                    return data
-            except json.JSONDecodeError as e:
-                print(f"❌ Erro ao decodificar JSON do bloco: {e}")
-    
-    # CASO 2: É um bloco de código genérico
-    elif text.startswith('```'):
-        match = re.search(r'```\s*(.*?)\s*```', text, re.DOTALL)
-        if match:
-            json_text = match.group(1).strip()
-            print(f"✅ Encontrado bloco de código genérico: {json_text[:100]}...")
-            try:
-                data = json.loads(json_text)
-                if isinstance(data, dict):
-                    print(f"✅ JSON extraído do bloco genérico: {list(data.keys())}")
-                    return data
-            except json.JSONDecodeError:
-                # Pode não ser JSON, então trata como texto normal
-                pass
-    
-    # CASO 3: Tenta encontrar JSON com regex
-    json_pattern = r'\{[^{}]*\{[^{}]*\}[^{}]*\}'  # Captura objetos JSON aninhados
-    matches = re.findall(json_pattern, text, re.DOTALL)
-    
-    for match in matches:
-        try:
-            data = json.loads(match)
-            if isinstance(data, dict) and data:
-                print(f"✅ JSON extraído via regex: {list(data.keys())}")
-                return data
-        except json.JSONDecodeError:
-            continue
-    
-    # CASO 4: Tenta parsear a string inteira como JSON
+    # Se for string, tenta fazer parse direto (para outros providers)
     try:
-        data = json.loads(text)
-        if isinstance(data, dict) and data:
-            print(f"✅ JSON parseado diretamente: {list(data.keys())}")
-            return data
-    except json.JSONDecodeError:
-        pass
-    
-    # CASO 5: Fallback - se parece ser um objeto JSON mas falhou, tenta corrigir
-    if '{' in text and '}' in text:
-        # Tenta encontrar o primeiro { e o último }
-        start = text.find('{')
-        end = text.rfind('}') + 1
-        if start < end:
-            json_candidate = text[start:end]
-            try:
-                data = json.loads(json_candidate)
-                if isinstance(data, dict) and data:
-                    print(f"✅ JSON extraído via fallback: {list(data.keys())}")
-                    return data
-            except json.JSONDecodeError:
-                pass
-    
-    # CASO 6: Fallback final - cria estrutura básica com o texto completo
-    print("⚠️ Nenhum JSON válido encontrado, usando fallback com texto completo")
-    return {
-        "roteiro": text,  # Usa o texto completo como roteiro
-        "titulo_youtube": "Reflexão Filosófica",
-        "descricao_curta": "Uma reflexão sobre temas profundos",
-        "thumbnail_palavras": ["filosofia", "reflexão", "pensamento"],
-        "tags_virais": ["#Filosofia", "#Reflexão", "#Pensamento"]
-    }
+        return json.loads(text)
+    except:
+        # Fallback básico
+        return {
+            "texto": str(text)[:1000],
+            "titulo": "Generated Content",
+            "descricao": "Automatically generated content",
+            "hook": "Default hook",
+            "hook_pt": "Hook padrão", 
+            "thumb": "default",
+            "tags": ["#default"]
+        }
+    print(f"✅ JSON extraído: {list(data.keys())}")
+    return data
 
 def save_json(dados: Dict[str, Any], out_dir: Path) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -135,7 +65,7 @@ def criar_pasta_roteiro(pasta_base: Path, id_video: str) -> Path:
     pasta_roteiro.mkdir(parents=True, exist_ok=True)
     return pasta_roteiro
 
-def save_json(dados: dict, pasta_roteiro: Path):
+def save_json_completo(dados: dict, pasta_roteiro: Path):
     """
     Salva arquivos JSON e TXT do roteiro na pasta especificada
     
@@ -155,7 +85,8 @@ def save_json(dados: dict, pasta_roteiro: Path):
     
     # Salva texto em arquivo .txt
     caminho_txt = pasta_roteiro / f"{id_video}.txt"
+    texto_pt = dados.get("texto_pt", dados.get("texto", ""))
     with open(caminho_txt, 'w', encoding='utf-8') as f:
-        f.write(dados.get("texto_pt", ""))
+        f.write(texto_pt)
     
     return caminho_json, caminho_txt

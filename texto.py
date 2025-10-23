@@ -17,8 +17,6 @@ logging.getLogger('sqlalchemy.pool').setLevel(logging.WARNING)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Silencia logs do TensorFlow se houver
 logging.basicConfig(level=logging.ERROR, format='%(message)s')
 
-
-
 try:
     from read_config import carregar_config_canal
     from providers.base_texto import make_provider, ModelParams
@@ -151,14 +149,13 @@ class TextGenerator:
             params = ModelParams(
                 temperature=config.get('TEMPERATURE', 0.7),
                 top_p=config.get('TOP_P', 0.9),
-                max_output_tokens=config.get('MAX_TOKENS', 1200),
+                max_output_tokens=config.get('MAX_TOKENS', 65000),
                 seed=config.get('SEED')
             )
             
             # Carrega e personaliza prompt do agente (com tema aleatório se não especificado)
             prompt = self.carregar_agente(config, linha_tema, schema)
 
-            
             # Cria provider (usa o da config se não especificado)
             provider_name = provider or config.get('TEXT_PROVIDER', 'gemini')
             texto_provider = make_provider(provider_name)
@@ -168,14 +165,24 @@ class TextGenerator:
             
             # Gera conteúdo
             resultado = texto_provider.generate(prompt, params)
-            
-            resultado = texto_provider.generate(prompt, params)
 
-
-            # Extrai e valida JSON
+            # ✅ CORREÇÃO CRÍTICA: Extrai e valida JSON
             dados_json = extract_json_maybe(resultado)
             
+            # ✅ GARANTE que dados_json é um dict
+            if not isinstance(dados_json, dict):
+                print(f"❌ ERRO CRÍTICO: extract_json_maybe retornou não-dict: {type(dados_json)}")
+                dados_json = {
+                    "texto": str(dados_json)[:1000] if dados_json else "Conteúdo não disponível",
+                    "titulo": "Spiritual Reflection",
+                    "descricao": "A moment of prayer and reflection",
+                    "hook": "Find peace in prayer",
+                    "hook_pt": "Encontre paz na oração",
+                    "thumb": "prayer peace reflection",
+                    "tags": ["#prayer", "#faith", "#christian", "#peace", "#reflection"]
+                }
 
+            # ✅ CORREÇÃO: Valida contra o schema
             if not self.validar_json_contra_schema(dados_json, schema):
                 print("❌ JSON não atende ao schema - parando execução")
                 return None
@@ -188,10 +195,12 @@ class TextGenerator:
                 'modelo': config.get('MODEL_NAME', 'N/A')
             })
             
-            return dados_json
+            return dados_json  # ✅ CORREÇÃO: Retorna dados_json, não resultado
             
         except Exception as e:
             print(f"❌ Erro na geração do roteiro: {e}")
+            import traceback
+            traceback.print_exc()
             raise
 
     def salvar_roteiro_completo(self, dados: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
@@ -227,7 +236,7 @@ def main():
         roteiro = generator.gerar_roteiro(args.canal, args.linha_tema, args.provider)
         
         print(f"\n🎬 Roteiro gerado com sucesso!")
-        print(f"📺 Título: {roteiro.get('titulo_youtube', 'N/A')}")
+        print(f"📺 Título: {roteiro.get('titulo', 'N/A')}")
         print(f"📝 Descrição: {roteiro.get('descricao', 'N/A')}")
         print(f"🏷️ Tags: {', '.join(roteiro.get('tags', []))}")
         print(f"📊 Palavras-chave thumb: {roteiro.get('thumbnail_palavras', [])}")

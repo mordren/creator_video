@@ -51,6 +51,7 @@ class Roteiro(SQLModel, table=True):
     # ✅ CORREÇÃO: Torna essas colunas opcionais
     arquivo_audio: Optional[str] = Field(default=None, sa_type=Text)
     arquivo_legenda: Optional[str] = Field(default=None, sa_type=Text)
+    audio_mixado: Optional[str] = Field(default=None, sa_type=Text)
     tts_provider: Optional[str] = Field(default=None, sa_type=Text)
     voz_tts: Optional[str] = Field(default=None, sa_type=Text)
     audio_gerado: bool = False

@@ -1,0 +1,16 @@
+file 'C:\Users\mordren\Documents\Foocus\imagens geradas\out_short_segundos\1 (160).png'
+duration 5.025
+file 'C:\Users\mordren\Documents\Foocus\imagens geradas\out_short_segundos\1 (62).png'
+duration 5.025
+file 'C:\Users\mordren\Documents\Foocus\imagens geradas\out_short_segundos\1 (98).png'
+duration 5.025
+file 'C:\Users\mordren\Documents\Foocus\imagens geradas\out_short_segundos\1 (91).png'
+duration 5.025
+file 'C:\Users\mordren\Documents\Foocus\imagens geradas\out_short_segundos\1 (191).png'
+duration 5.025
+file 'C:\Users\mordren\Documents\Foocus\imagens geradas\out_short_segundos\1 (210).png'
+duration 5.025
+file 'C:\Users\mordren\Documents\Foocus\imagens geradas\out_short_segundos\1 (42).png'
+duration 5.025
+file 'C:\Users\mordren\Documents\Foocus\imagens geradas\out_short_segundos\1 (25).png'
+duration 5.025

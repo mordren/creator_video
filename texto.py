@@ -229,20 +229,6 @@ class TextGenerator:
                 attempts += 1
 
                 
-            
-            # ✅ GARANTE que dados_json é um dict
-            if not isinstance(dados_json, dict):
-                print(f"❌ ERRO CRÍTICO: extract_json_maybe retornou não-dict: {type(dados_json)}")
-                dados_json = {
-                    "texto": str(dados_json) if dados_json else "Conteúdo não disponível",
-                    "titulo": "Spiritual Reflection",
-                    "descricao": "A moment of prayer and reflection",
-                    "hook": "Find peace in prayer",
-                    "hook_pt": "Encontre paz na oração",
-                    "thumb": "prayer peace reflection",
-                    "tags": ["#prayer", "#faith", "#christian", "#peace", "#reflection"]
-                }
-
             # ✅ CORREÇÃO: Valida contra o schema
             if not self.validar_json_contra_schema(dados_json, schema):
                 print("❌ JSON não atende ao schema - parando execução")

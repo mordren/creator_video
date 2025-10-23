@@ -122,7 +122,7 @@ class DatabaseManager:
                 return True
             return False
     
-    def atualizar_roteiro_audio(self, id_roteiro: int, arquivo_audio: str, tts_provider: str, voz_tts: str, arquivo_legenda: str = None):
+    def atualizar_roteiro_audio(self, id_roteiro: int, arquivo_audio: str, tts_provider: str, voz_tts: str, arquivo_legenda: str = None, mixado: str = None):
         """Atualiza informações de áudio do roteiro incluindo a voz TTS e legenda"""
         with Session(self.engine) as session:
             roteiro = session.get(Roteiro, id_roteiro)
@@ -130,8 +130,10 @@ class DatabaseManager:
                 roteiro.arquivo_audio = arquivo_audio
                 roteiro.tts_provider = tts_provider
                 roteiro.voz_tts = voz_tts
+                roteiro.audio_gerado = True
                 if arquivo_legenda:
                     roteiro.arquivo_legenda = arquivo_legenda
+                roteiro.audio_mixado = mixado
                 session.commit()
                 return True
             return False

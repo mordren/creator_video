@@ -1,0 +1,171 @@
+"""
+UTILITÁRIOS DE VÍDEO - COMPARTILHÁVEIS ENTRE TODOS OS CANAIS
+"""
+import subprocess
+import shutil
+from pathlib import Path
+
+# Funções que ambos os sistemas usam
+def get_media_duration(path):
+    """Obtém a duração de um arquivo de mídia de forma robusta"""
+    try:
+        path = Path(path)
+        if not path.exists():
+            return 0.0
+            
+        # Primeiro verifica se é um arquivo de áudio válido
+        if path.suffix.lower() not in ['.mp3', '.wav', '.m4a', '.aac', '.flac']:
+            return 0.0
+            
+        resultado = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", str(path)],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        )
+        if resultado.returncode != 0:
+            return 0.0
+            
+        duration = resultado.stdout.strip()
+        if not duration:
+            return 0.0
+            
+        return float(duration)
+    except Exception as e:
+        print(f"Erro ao obter duração de {path}: {e}")
+        return 0.0
+
+def safe_copy(src, dst):
+    src = Path(src).resolve()
+    dst = Path(dst).resolve()
+    if not src.exists():
+        raise FileNotFoundError(f"Arquivo não existe: {src}")
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(str(src), str(dst))
+
+def safe_move(src, dst):
+    src = Path(src).resolve()
+    dst = Path(dst).resolve()
+    if not src.exists():
+        raise FileNotFoundError(f"Arquivo não existe: {src}")
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    if dst.exists():
+        dst.unlink()
+    shutil.move(str(src), str(dst))
+
+
+def listar_imagens(diretorio):
+    exts = ('.jpg', '.jpeg', '.png', '.bmp')
+    path = Path(diretorio)
+    if not path.exists():
+        return []
+    return sorted([str(f) for f in path.iterdir() if f.suffix.lower() in exts])
+
+
+def gerar_capa(imagem, titulo, largura=720, altura=1280, cor_texto="#6B10D3", cor_borda="#FFFFFF", tamanho_fonte=None, fontfile_path=None):
+    """
+    Gera capa PNG flexível para qualquer aspect ratio
+    
+    Args:
+        imagem: caminho da imagem de fundo
+        titulo: texto do título
+        largura: largura desejada (padrão 720 - vertical)
+        altura: altura desejada (padrão 1280 - vertical)
+        cor_texto: cor do texto em hex
+        cor_borda: cor da borda em hex  
+        tamanho_fonte: tamanho da fonte (calculado automaticamente se None)
+        fontfile_path: caminho para arquivo de fonte personalizada
+    """
+    saida = Path("capa.png")
+    
+    # Calcula tamanho da fonte baseado na altura se não especificado
+    if tamanho_fonte is None:
+        tamanho_fonte = int(altura * 0.026)  # 2.6% da altura
+    
+    # Escapa caracteres especiais para o FFmpeg
+    txt = str(titulo).replace("\\", "\\\\").replace(":", r"\:").replace("'", r"\'")
+    
+    # Configuração da fonte
+    font_config = f"fontfile='{fontfile_path}'" if fontfile_path else "font='Montserrat Black'"
+    
+    # Filtro complexo para scaling + texto centralizado
+    vf = (
+        f"scale={largura}:{altura}:force_original_aspect_ratio=decrease,"
+        f"pad={largura}:{altura}:(ow-iw)/2:(oh-ih)/2:color=black,"
+        f"drawtext=text='{txt}':{font_config}:fontsize={tamanho_fonte}:"
+        f"fontcolor={cor_texto}:borderw=3:bordercolor={cor_borda}:"
+        f"x=(w-text_w)/2:y=(h-text_h)/2-{altura*0.04}"  # 4% da altura acima do centro
+    )
+    
+    comando = [
+        "ffmpeg", "-y", 
+        "-i", str(imagem), 
+        "-vf", vf,
+        "-frames:v", "1", 
+        "-update", "1", 
+        str(saida)
+    ]
+    
+    subprocess.run(comando, check=True, capture_output=True)
+    return saida
+
+#isso aqui é bom para dar erro.
+#TODO corrigir essa parte de fonte.
+
+def gerarCapaPNG(imagem, titulo, w=720, h=1280, usar_fontfile=False, fontfile_path=r"C:\Windows\Fonts\Montserrat-Black.ttf"):
+    saida = Path("capa.png")
+    cor_titulo = "#6B10D3"
+    cor_borda = "#FFFFFF"
+    txt = str(titulo).replace("\\", "\\\\").replace(":", r"\:").replace("'", r"\'")
+    font_opt = f"fontfile='{fontfile_path}'" if usar_fontfile else "font='Montserrat Black'"
+
+    vf = (
+        f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
+        f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,"
+        f"drawtext=text='{txt}':{font_opt}:fontsize=34:"
+        f"fontcolor={cor_titulo}:borderw=3:bordercolor={cor_borda}:"
+        f"x=(w-text_w)/2:y=(h-text_h)/2-50"
+    )
+    comando = ["ffmpeg", "-y", "-i", str(imagem), "-vf", vf, "-frames:v", "1", "-update", "1", str(saida)]
+    subprocess.run(comando, check=True)
+    return saida
+
+
+def mixar_audio_voz_trilha(audio_voz, trilha_path, ganho_voz=0, ganho_musica=-15):
+    """
+    Mixa a narração (voz) com a trilha musical, normalizando o volume final.
+    Salva o arquivo mixado no mesmo diretório do áudio original.
+    """
+    audio_path = Path(audio_voz)
+    trilha = Path(trilha_path)
+
+    if not audio_path.exists():
+        raise FileNotFoundError(f"Arquivo de voz não encontrado: {audio_path}")
+    if not trilha.exists():
+        raise FileNotFoundError(f"Trilha musical não encontrada: {trilha}")
+
+    # define saída
+    saida = audio_path.with_name(f"{audio_path.stem}_mixado.mp3")
+
+    # comando ffmpeg
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", str(audio_path),
+        "-i", str(trilha),
+        "-filter_complex",
+        (
+            f"[0:a]volume={ganho_voz}dB[a0];"
+            f"[1:a]volume={ganho_musica}dB[a1];"
+            f"[a0][a1]amix=inputs=2:duration=first:dropout_transition=2,"
+            f"dynaudnorm=f=250:g=3[a]"
+        ),
+        "-map", "[a]",
+        "-c:a", "libmp3lame",   # codec seguro para MP3
+        "-b:a", "192k",
+        "-ar", "48000",
+        str(saida)
+    ]
+
+    print(f"🎧 Mixando: {audio_path.name} + {trilha.name}")
+    subprocess.run(cmd, check=True)
+    print(f"✅ Áudio mixado salvo em: {saida}")
+    return saida

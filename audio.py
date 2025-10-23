@@ -4,6 +4,8 @@ import sys
 import argparse
 from pathlib import Path
 
+from video_maker.video_components import mixar_audio_voz_trilha
+
 sys.path.append(str(Path(__file__).parent))
 
 try:
@@ -48,20 +50,21 @@ class AudioSystem:
         # Gera áudio
         audio_file = pasta_video / f"{video_id}.mp3"
         print(f"📝 {len(text)} chars | 🔊 {provider} | 📺 {data.get('titulo', 'Sem título')}")
-        
+                
         tts = create_tts_provider(provider)
         success = tts.sintetizar(text, audio_file, config)
         
-        if success and audio_file.exists():
-            # ✅ APENAS atualiza se o áudio foi gerado com sucesso
-            self._update_apos_audio_sucesso(data, str(audio_file), provider, channel, config, arquivo_json)
+        mixado = mixar_audio_voz_trilha(audio_file, config.get('MUSICA'))
+
+        if mixado.exists() and success and audio_file.exists():
+            self._update_apos_audio_sucesso(data, str(audio_file), str(mixado),provider, channel, config, arquivo_json)
             print(f"✅ Áudio gerado: {audio_file}")
             return True
         
         print("❌ Falha na geração")
         return False
 
-    def _update_apos_audio_sucesso(self, data: dict, audio_file: str, provider: str, channel: str, config: dict, arquivo_json: Path):
+    def _update_apos_audio_sucesso(self, data: dict, audio_file: str, mixado: str, provider: str, channel: str, config: dict, arquivo_json: Path):
         """Atualiza APENAS se o áudio foi gerado com sucesso"""
         
         # Obtém a voz TTS baseada no provider
@@ -80,7 +83,8 @@ class AudioSystem:
             if srt_path.exists():
                 arquivo_legenda = str(srt_path)
                 print(f"📝 Legenda SRT encontrada: {srt_path}")
-        
+
+
         # Atualiza JSON
         data.update({
             'audio_gerado': True,
@@ -108,7 +112,8 @@ class AudioSystem:
                         audio_file,
                         provider,
                         voz_tts,
-                        arquivo_legenda  # ✅ Agora inclui o caminho do .srt
+                        arquivo_legenda,
+                        mixado  # ✅ Agora inclui o caminho do .srt
                     )
                     print("💾 Banco ATUALIZADO com informações do áudio (incluindo voz TTS e legenda)")
                 else:

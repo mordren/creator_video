@@ -43,12 +43,7 @@ class VideoManager:
         with open(caminho_json, 'w', encoding='utf-8') as f:
             json.dump(dados, f, ensure_ascii=False, indent=2)
         
-        # Salva texto em arquivo .txt
-        caminho_txt = pasta_video / f"{video_id}.txt"
-        with open(caminho_txt, 'w', encoding='utf-8') as f:
-            f.write(dados.get("texto_pt", ""))
-        
-        return caminho_json, caminho_txt
+        return caminho_json
     
     def salvar_video_completo(self, dados: Dict, canal_nome: str, config: Dict) -> Dict:
         """
@@ -69,7 +64,7 @@ class VideoManager:
         dados['data_criacao'] = datetime.now().isoformat()
         
         # Salva arquivos
-        caminho_json, caminho_txt = self.salvar_arquivos_video(dados, pasta_video)
+        caminho_json = self.salvar_arquivos_video(dados, pasta_video)
         
         # Salva no banco de dados
         resultado_db = self._salvar_no_banco(dados, config, canal_nome)
@@ -77,8 +72,7 @@ class VideoManager:
         return {
             'id_video': video_id,
             'pasta_video': pasta_video,
-            'arquivo_json': caminho_json,
-            'arquivo_txt': caminho_txt,
+            'arquivo_json': caminho_json,            
             'dados': dados,
             'db_result': resultado_db
         }

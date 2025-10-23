@@ -11,8 +11,8 @@ PASTA_VIDEOS = Path(r"E:\Canal Religioso\Vídeos")
 
 # -------------------------- Parâmetros Comuns --------------------------------------
 IDIOMA = "en"
-TAMANHO_MAX = 3300
-DURACAO_MIN = 30
+TAMANHO_MAX = 3000
+DURACAO_MIN = 25
 
 
 # -------------------------- Agente -------------------------------------------------

@@ -60,3 +60,8 @@ try:
     from . import gemini_text  # Isso executa o @register_provider
 except ImportError as e:
     print(f"⚠️ Aviso: Não foi possível importar gemini_text: {e}")
+
+try:
+    from . import grok_text  # Novo provider Grok
+except ImportError as e:
+    print(f"⚠️ Aviso: Não foi possível importar grok_text: {e}")

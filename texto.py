@@ -192,9 +192,9 @@ class TextGenerator:
             test = extract_json_maybe(resultado)
             dados_json = self.limpar_json_aninhado(test)
 
-            faixa = [int(tamanho_texto * (1 - 0.05)), int(tamanho_texto * (1 + 0.05))]
+            faixa = [int(tamanho_texto * (1 - 0.10)), int(tamanho_texto * (1 + 0.10))]
             attempts = 0
-            while not faixa[0] <= count_words(dados_json.get('texto', '')) <= faixa[1] and attempts < 3:
+            while not faixa[0] <= count_words(dados_json.get('texto', '')) <= faixa[1] and attempts < 4:
                 print('tamanho:' + str(count_words(dados_json.get('texto'))))
                 print('Refazendo')
                 atual = count_words(dados_json.get('texto', ''))
@@ -204,9 +204,10 @@ class TextGenerator:
                     print(f"Refazendo (faltam ~{deficit} palavras)")
                     expand_prompt = (
                         "You previously returned this JSON.\n"
-                        "Expand ONLY the 'texto' field by ADDING new paragraphs (no headings), "
-                        f"with at least {deficit} more words. Keep tone and cadence. "
-                        "Return FULL JSON with updated 'texto' and 'palavras'.\n\n"
+                        "Now EXPAND only the field 'texto' to reach a total length close to "
+                        f"{tamanho_texto} words (acceptable range {faixa[0]}–{faixa[1]} words). "
+                        f"Add about {abs(deficit)} more words by deepening reflection, repetition cadence, and gentle transitions. "
+                        "Do NOT change tone, structure, or metadata. Return the FULL JSON again.\n\n"
                         + json.dumps(dados_json, ensure_ascii=False, indent=2)
                     )
 
@@ -215,9 +216,10 @@ class TextGenerator:
                     print(f"Reduzindo (excesso de ~{excesso} palavras)")
                     expand_prompt = (
                         "You previously returned this JSON.\n"
-                        "Tighten ONLY the 'texto' field by merging repetitions and trimming gently, "
-                        f"removing about {excesso} words. Keep tone and cadence. "
-                        "Return FULL JSON with updated 'texto' and 'palavras'.\n\n"
+                        "Now REDUCE only the field 'texto' to stay near "
+                        f"{tamanho_texto} words (acceptable range {faixa[0]}–{faixa[1]} words). "
+                        "Remove redundancies or rephrase lightly to keep natural flow and rhythm. "
+                        "Do NOT change tone, structure, or metadata. Return the FULL JSON again.\n\n"
                         + json.dumps(dados_json, ensure_ascii=False, indent=2)
                     )
 

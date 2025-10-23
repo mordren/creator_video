@@ -1,6 +1,5 @@
 {
-  "tipo": "json",
-  "campos_obrigatorios": ["texto", "titulo", "descricao", "hook", "hook_pt", "tags", "thumb"],
+  "tipo": "json",  
   "campos_obrigatorios": ["texto", "titulo", "descricao", "thumb", "tags"],
   "placeholder_tema": "{tema}",
   "placeholder_autor": "{autor}",

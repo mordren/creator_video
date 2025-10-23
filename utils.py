@@ -90,3 +90,6 @@ def save_json_completo(dados: dict, pasta_roteiro: Path):
         f.write(texto_pt)
     
     return caminho_json, caminho_txt
+
+def count_words(s: str) -> int:
+    return len(re.findall(r"\b\w+(?:'\w+)?\b", s or ""))

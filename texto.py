@@ -9,6 +9,8 @@ from typing import Dict, Any, Optional
 import logging
 import os
 
+from utils import count_words
+
 # Configura o path para imports
 sys.path.append(str(Path(__file__).parent))
 
@@ -36,6 +38,29 @@ class TextGenerator:
         except Exception as e:
             print(f"⚠️ Aviso: Não foi possível conectar ao banco: {e}")
             self.db = None
+
+    
+    def limpar_json_aninhado(self,dados):
+        """Remove JSON aninhado dentro de 'texto' e deixa só o texto puro."""
+        import re, json
+        if not isinstance(dados, dict):
+            return dados
+        texto = dados.get("texto", "")
+        if isinstance(texto, str):
+            # remove cercas markdown e ```json
+            texto_limpo = re.sub(r"^```json|```$", "", texto.strip(), flags=re.IGNORECASE)
+            # tenta decodificar se ainda for um JSON stringificado
+            try:
+                interno = json.loads(texto_limpo)
+                if isinstance(interno, dict) and "texto" in interno:
+                    texto_limpo = interno["texto"]
+            except Exception:
+                pass
+            # desescapa aspas e \n
+            texto_limpo = texto_limpo.replace('\\"', '"').replace('\\\\n', '\n')
+            dados["texto"] = texto_limpo.strip()
+        return dados
+
     
     def carregar_schema(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Carrega o schema de validação do canal"""
@@ -121,13 +146,17 @@ class TextGenerator:
                 '{tema}': tema,
                 '{autor}': autor,
                 '{TAMANHO_MAX}': str(config.get('TAMANHO_MAX', 135)),
+                '{DURACAO_MINUTOS}': str(config.get('DURACAO_MINUTOS', 1)),
                 '{campos_obrigatorios}': str(schema_data.get('campos_obrigatorios', [])),
                 '{exemplo_resposta}': schema_data.get('exemplo_resposta', '')
             }
             
             # ✅ SUBSTITUI TODOS OS PLACEHOLDERS NO TEMPLATE
             for placeholder, valor in substituicoes.items():
+                if not isinstance(valor, str):
+                    valor = json.dumps(valor, ensure_ascii=False, indent=2)
                 template = template.replace(placeholder, valor)
+
             
             print(f"🎯 Tema: {tema}")
             print(f"👤 Autor: {autor if autor else '(não especificado)'}")
@@ -138,21 +167,15 @@ class TextGenerator:
             print(f"❌ Erro ao carregar agente: {e}")
             raise
 
+
     def gerar_roteiro(self, canal: str, linha_tema: Optional[str] = None, provider: Optional[str] = None) -> Dict[str, Any]:
         """Gera um roteiro completo usando o provider configurado"""
         try:
             # Carrega configuração do canal
             config = carregar_config_canal(canal)
             schema = self.carregar_schema(config)
+            tamanho_texto = config.get('TAMANHO_MAX')
 
-            # Prepara parâmetros do modelo
-            params = ModelParams(
-                temperature=config.get('TEMPERATURE', 0.7),
-                top_p=config.get('TOP_P', 0.9),
-                max_output_tokens=config.get('MAX_TOKENS', 65000),
-                seed=config.get('SEED')
-            )
-            
             # Carrega e personaliza prompt do agente (com tema aleatório se não especificado)
             prompt = self.carregar_agente(config, linha_tema, schema)
 
@@ -160,20 +183,56 @@ class TextGenerator:
             provider_name = provider or config.get('TEXT_PROVIDER', 'gemini')
             texto_provider = make_provider(provider_name)
             
-            print(f"🧠 Gerando roteiro com {provider_name.upper()}...")
-            print(f"🎯 Parâmetros: temp={params.temperature}, top_p={params.top_p}")
+            print(f"🧠 Gerando roteiro com {provider_name.upper()}...")            
             
             # Gera conteúdo
-            resultado = texto_provider.generate(prompt, params)
+            resultado = texto_provider.generate(prompt)
 
             # ✅ CORREÇÃO CRÍTICA: Extrai e valida JSON
-            dados_json = extract_json_maybe(resultado)
+            test = extract_json_maybe(resultado)
+            dados_json = self.limpar_json_aninhado(test)
+
+            faixa = [int(tamanho_texto * (1 - 0.05)), int(tamanho_texto * (1 + 0.05))]
+            attempts = 0
+            while not faixa[0] <= count_words(dados_json.get('texto', '')) <= faixa[1] and attempts < 3:
+                print('tamanho:' + str(count_words(dados_json.get('texto'))))
+                print('Refazendo')
+                atual = count_words(dados_json.get('texto', ''))
+
+                if atual < faixa[0]:
+                    deficit = faixa[0] - atual
+                    print(f"Refazendo (faltam ~{deficit} palavras)")
+                    expand_prompt = (
+                        "You previously returned this JSON.\n"
+                        "Expand ONLY the 'texto' field by ADDING new paragraphs (no headings), "
+                        f"with at least {deficit} more words. Keep tone and cadence. "
+                        "Return FULL JSON with updated 'texto' and 'palavras'.\n\n"
+                        + json.dumps(dados_json, ensure_ascii=False, indent=2)
+                    )
+
+                elif atual > faixa[1]:
+                    excesso = atual - faixa[1]
+                    print(f"Reduzindo (excesso de ~{excesso} palavras)")
+                    expand_prompt = (
+                        "You previously returned this JSON.\n"
+                        "Tighten ONLY the 'texto' field by merging repetitions and trimming gently, "
+                        f"removing about {excesso} words. Keep tone and cadence. "
+                        "Return FULL JSON with updated 'texto' and 'palavras'.\n\n"
+                        + json.dumps(dados_json, ensure_ascii=False, indent=2)
+                    )
+
+                resultado = texto_provider.generate(expand_prompt)
+                test = extract_json_maybe(resultado)
+                dados_json = self.limpar_json_aninhado(test)
+                attempts += 1
+
+                
             
             # ✅ GARANTE que dados_json é um dict
             if not isinstance(dados_json, dict):
                 print(f"❌ ERRO CRÍTICO: extract_json_maybe retornou não-dict: {type(dados_json)}")
                 dados_json = {
-                    "texto": str(dados_json)[:1000] if dados_json else "Conteúdo não disponível",
+                    "texto": str(dados_json) if dados_json else "Conteúdo não disponível",
                     "titulo": "Spiritual Reflection",
                     "descricao": "A moment of prayer and reflection",
                     "hook": "Find peace in prayer",
@@ -186,7 +245,8 @@ class TextGenerator:
             if not self.validar_json_contra_schema(dados_json, schema):
                 print("❌ JSON não atende ao schema - parando execução")
                 return None
-
+            
+            
             # Adiciona metadados
             dados_json.update({
                 'canal': canal,

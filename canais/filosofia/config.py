@@ -47,4 +47,4 @@ RESOLUCAO = "720x1280"
 FPS = 60
 FONTE = "Montserrat-Black"
 TAMANHO_FONTE = 90
-
+MUSICA = Path(r"C:\Users\mordren\Documents\creator\canais\filosofia\assets\music\filosofia.mp3")

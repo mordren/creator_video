@@ -113,41 +113,24 @@ class GeminiTextProvider(TextoProvider):
             "tags": ["#prayer", "#faith", "#christian", "#peace", "#god"]
         }
     
-    def generate(self, prompt: str, params: ModelParams) -> Dict[str, Any]:
+    def generate(self, prompt: str) -> Dict[str, Any]:
         """Gera conteúdo usando Gemini com garantia de JSON perfeito"""
         try:
             # Cria modelo
             model = genai.GenerativeModel(self.model_name)
             
-            # Configura geração
-            generation_config = {
-                "temperature": params.temperature,
-                "top_p": params.top_p,
-                "max_output_tokens": params.max_output_tokens,
-            }
-            
-            if params.seed:
-                generation_config["seed"] = params.seed
-            
-            print(f"🔧 Enviando prompt para Gemini...")
-            print(f"📝 Prompt preview: {prompt[:200]}...")
-            
             # Gera conteúdo
             response = model.generate_content(
-                prompt,
-                generation_config=generation_config
+                prompt,                
             )
             
             # Verifica se há resposta
             if not response or not response.text:
                 raise ValueError("Resposta vazia do Gemini")
             
-            print(f"📨 Resposta recebida do Gemini: {len(response.text)} chars")
-            
             # Tenta extrair JSON da resposta
             try:
-                resultado = self._clean_json_response(response.text)
-                print(f"🎯 JSON extraído com sucesso: {list(resultado.keys())}")
+                resultado = self._clean_json_response(response.text)                
                 return resultado
                 
             except Exception as json_error:

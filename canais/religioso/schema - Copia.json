@@ -1,0 +1,7 @@
+{
+  "tipo": "json",
+   "campos_obrigatorios": ["texto", "titulo", "descricao", "hook", "hook_pt", "tags", "thumb"],
+  "placeholder_tamanho": "{TAMANHO_MAX}",
+  "placeholder_tema": "{tema}",
+  "exemplo_resposta": "{\"texto\": \"Dear Lord, as I begin this day, I invite Your peace to fill my heart. When worries arise, help me to trust in Your guidance. Holy Spirit, be my comfort and strength today. Amen.\", \"titulo\": \"Start Your Day With God's Peace | Morning Prayer\", \"descricao\": \"A short morning prayer inviting God's peace and guidance for your day.\", \"hook\": \"Begin your day with God's presence\", \"hook_pt\": \"Comece seu dia com a presença de Deus\", \"thumb\": \"peace morning prayer\", \"tags\": [\"Morning Prayer\", \"Prayer\", \"Jesus\", \"Peace\", \"Guidance\"]}"
+}

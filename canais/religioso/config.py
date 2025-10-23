@@ -11,7 +11,8 @@ PASTA_VIDEOS = Path(r"E:\Canal Religioso\Vídeos")
 
 # -------------------------- Parâmetros Comuns --------------------------------------
 IDIOMA = "en"
-TAMANHO_MAX = 3650
+TAMANHO_MAX = 3300
+DURACAO_MIN = 30
 
 
 # -------------------------- Agente -------------------------------------------------
@@ -40,3 +41,4 @@ RESOLUCAO = "1280x720"
 FPS = 60
 FONTE = "Montserrat-Black"
 TAMANHO_FONTE = 90
+MUSICA = Path(r"C:\Users\mordren\Documents\creator\canais\filosofia\assets\music\filosofia.mp3")

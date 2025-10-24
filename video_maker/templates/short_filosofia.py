@@ -1,28 +1,31 @@
-# templates/short_filosofia.py
-from pathlib import Path
+# video_maker/templates/short_filosofia.py
+
 import random
-import subprocess
 import shutil
-import sys
-import os
+import subprocess
+from pathlib import Path
 
-# Adiciona o caminho pai ao sys.path para imports absolutos
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from video_maker.subtitle_tools import srt_to_ass_karaoke
+from video_maker.video_engine import aplicar_efeito
+from video_maker.video_utils import gerar_capa, get_media_duration, listar_imagens
 
-from ..video_utils import (
-    get_media_duration, 
-    listar_imagens,
-    gerar_capa,    
-)
-from ..subtitle_tools import srt_to_ass_karaoke
-
-# Importar os efeitos que funcionam (baseado no seu simple.py)
-from ..efeitos.camera_instavel import criar_video_camera_instavel
-from ..efeitos.depth_3d import criar_video_depth_3d
-from ..efeitos.pan import criar_video_pan
-from ..efeitos.panoramica_vertical import criar_video_panoramica_vertical
-from ..efeitos.zoom_invertido import criar_video_zoom_invertido
-from ..efeitos.zoom_pulse import criar_video_pulse
+def criar_frame_estatico(imagem_path: Path, duracao: float, output_path: Path):
+    """Cria um vídeo com frame estático a partir de uma imagem (igual ao simple.py)"""
+    cmd = [
+        "ffmpeg", "-y",
+        "-loop", "1",
+        "-i", str(imagem_path),
+        "-t", str(duracao),
+        "-r", "30",
+        "-vf", "scale=720:1280,format=yuv420p",
+        "-c:v", "libx264",
+        "-preset", "veryfast",
+        "-crf", "21",
+        "-pix_fmt", "yuv420p",
+        str(output_path)
+    ]
+    subprocess.run(cmd, check=True, capture_output=True)
+    return output_path
 
 def normalizar_duracao(in_path, target_s, fps=60):
     """Normaliza a duração de um vídeo para o tempo exato (igual ao simple.py)"""
@@ -40,34 +43,13 @@ def normalizar_duracao(in_path, target_s, fps=60):
         "-c:v", "libx264", "-preset", "veryfast", "-crf", "21",
         "-pix_fmt", "yuv420p",
         str(out_path)
-    ], check=True)
+    ], check=True, capture_output=True)
     return str(out_path)
-
-def criar_clip_capa(capa_path: Path, dur=1.0) -> str:
-    """Cria um clipe da capa (igual ao simple.py)"""
-    saida = "./renders/temp/000_capa.mp4"
-    Path('./renders/temp/').mkdir(parents=True, exist_ok=True)
-    
-    cmd = [
-        "ffmpeg", "-y",
-        "-loop", "1",
-        "-i", str(capa_path),
-        "-t", str(dur),
-        "-r", "30",
-        "-vf", "scale=720:1280,format=yuv420p",
-        "-c:v", "libx264",
-        "-preset", "veryfast",
-        "-crf", "21",
-        "-pix_fmt", "yuv420p",
-        saida
-    ]
-    subprocess.run(cmd, check=True)
-    return saida
 
 def render(audio_path: str, config: dict) -> Path:
     """
     Template para vídeos curtos de filosofia VERTICAL (720x1280)
-    Baseado no simple.py que funciona
+    Versão melhorada e otimizada
     """
     audio = Path(audio_path)
     
@@ -109,8 +91,8 @@ def render(audio_path: str, config: dict) -> Path:
         gerar_capa(
             imagem=imagem_capa,
             titulo=titulo,
-            largura=720,    # VERTICAL
-            altura=1280,    # VERTICAL
+            largura=720,
+            altura=1280,
             cor_texto="#6B10D3",
             cor_borda="#FFFFFF"
         )
@@ -138,130 +120,159 @@ def render(audio_path: str, config: dict) -> Path:
                 print("✅ Legenda ASS gerada com sucesso")
             else:
                 print("⚠️ Arquivo ASS vazio ou inválido")
-                
         except Exception as e:
             print(f"❌ Erro ao gerar legenda ASS: {e}")
     else:
         print("⚠️ Arquivo SRT não encontrado")
     
-    # 6. CRIAR CLIPES COM EFEITOS (igual ao simple.py)
+    # 6. CRIAR FRAME ESTÁTICO DA CAPA
     output_path = output_dir / f"{audio.stem}_filosofia.mp4"
+    frame_capa_path = temp_dir / "000_capa.mp4"
+    criar_frame_estatico(capa_path, 1.0, frame_capa_path)
     
-    # Criar clipe da capa
-    clip_capa = criar_clip_capa(capa_path, dur=1.0)
-    
-    # Lista de efeitos disponíveis (igual ao simple.py)
-    efeitos = [
-        criar_video_panoramica_vertical,
-        criar_video_zoom_invertido,
-        criar_video_pan,
-        criar_video_pulse,
-        criar_video_camera_instavel,
-        # criar_video_depth_3d,  # Mais pesado, usar com cautela
+    # 7. CONFIGURAR E VERIFICAR EFEITOS
+    efeitos_disponiveis = [
+        'panoramica_vertical',
+        'zoom_invertido',
+        'pan',
+        'zoom_pulse',
+        'camera_instavel',
     ]
-    
-    # Calcular durações (igual ao simple.py)
+
+    # Verificar quais efeitos estão funcionando
+    efeitos_ativos = []
+    print("🔍 Verificando efeitos...")
+    for efeito in efeitos_disponiveis:
+        try:
+            teste = aplicar_efeito(efeito, imagens_selecionadas[0], 0.5)
+            if teste and Path(teste.filename).exists() and Path(teste.filename).stat().st_size > 1024:
+                efeitos_ativos.append(efeito)
+                print(f"✅ {efeito}")
+                # Limpar arquivo de teste
+                Path(teste.filename).unlink(missing_ok=True)
+            else:
+                print(f"❌ {efeito} - Falhou no teste")
+        except Exception as e:
+            print(f"❌ {efeito} - {str(e)[:100]}")
+
+    if not efeitos_ativos:
+        raise Exception("❌ Nenhum efeito funcionando!")
+    print(f"🎯 Efeitos ativos: {len(efeitos_ativos)}")
+
+    # 8. PROCESSAR IMAGENS COM EFEITOS
     rest = max(0.0, float(audio_duration) - 1.0)  # Subtrair duração da capa
-    imgs_restantes = imagens_selecionadas[1:]  # Pular a primeira que foi usada na capa
+    imgs_restantes = imagens_selecionadas[1:]  # Pular a primeira (usada na capa)
     
     n = len(imgs_restantes)
     clips_norm = []
     
     if n > 0 and rest > 0:
-        base = rest / n
-        durs = [base] * n
-        # Ajuste fino do último para fechar no total
-        soma = sum(durs)
-        durs[-1] += (rest - soma)
+        # Calcular durações com mínimo de 1.5 segundos por clipe
+        duracao_minima = 1.5
+        if rest < n * duracao_minima:
+            # Ajustar número de imagens se áudio for muito curto
+            n = max(1, int(rest / duracao_minima))
+            imgs_restantes = imgs_restantes[:n]
+            print(f"🔄 Ajustando para {n} imagens devido ao áudio curto")
+            rest = min(rest, n * duracao_minima)
         
-        # Criar arquivo de lista para concatenação
+        base = rest / n
+        durs = [max(duracao_minima, base)] * n  # Garantir duração mínima
+        
+        # Ajuste fino para fechar no total exato
+        soma = sum(durs)
+        if soma != rest:
+            durs[-1] += (rest - soma)
+        
+        # Criar lista de concatenação
         lista_clips = temp_dir / "lista_clips.txt"
         
         with open(lista_clips, "w", encoding="utf-8") as f:
-            # Adicionar capa primeiro
-            f.write(f"file '{Path(clip_capa).resolve()}'\n")
+            f.write(f"file '{frame_capa_path.name}'\n")  # Capa primeiro
             
-            # Processar cada imagem com efeitos
             for i, (img, seg) in enumerate(zip(imgs_restantes, durs)):
-                ef = random.choice(efeitos)
-                seg = max(0.3, float(seg))
+                nome_efeito = efeitos_ativos[i % len(efeitos_ativos)]
                 
                 try:
-                    print(f"🎬 Aplicando {ef.__name__} na imagem {i+1}...")
-                    raw = ef(img, seg)  # Cria com ~seg
+                    print(f"🎬 [{i+1}/{n}] {nome_efeito} ({seg:.1f}s)...")
                     
-                    if raw and hasattr(raw, 'filename') and Path(raw.filename).exists():
+                    raw = aplicar_efeito(nome_efeito, img, seg)
+                    
+                    if raw and Path(raw.filename).exists() and Path(raw.filename).stat().st_size > 1024:
                         norm = normalizar_duracao(raw.filename, seg, fps=60)
-                        if norm:
-                            f.write(f"file '{Path(norm).resolve()}'\n")
+                        if norm and Path(norm).exists():
+                            f.write(f"file '{Path(norm).name}'\n")
                             clips_norm.append(norm)
+                            print(f"   ✅ {Path(norm).name}")
                         else:
-                            print(f"⚠️ Falha ao normalizar clipe {i+1}")
+                            print(f"   ⚠️ Falha na normalização")
                     else:
-                        print(f"⚠️ Efeito {ef.__name__} falhou na imagem {i+1}")
+                        print(f"   ⚠️ Efeito falhou")
                         
                 except Exception as e:
-                    print(f"❌ Erro ao processar imagem {i+1} com {ef.__name__}: {e}")
+                    print(f"   ❌ Erro: {e}")
     
-    # 7. RENDER FINAL (igual ao simple.py)
+    # 9. RENDER FINAL
     print("🎥 Renderizando vídeo final...")
     
-    vf_final = f"ass={ass_path.name}" if tem_legenda else "scale=720:1280"
+    # Preparar arquivos necessários no temp_dir
+    audio_temp = temp_dir / audio.name
+    if not audio_temp.exists():
+        shutil.copy2(audio, audio_temp)
     
+    # Configurar filtro de vídeo
+    vf_filter = "ass=legenda.ass" if tem_legenda else "scale=720:1280"
+    
+    # Comando final
     cmd_final = [
         "ffmpeg", "-y",
-        "-f", "concat", "-safe", "0", "-i", str(lista_clips),
-        "-i", str(audio),
-        "-vf", vf_final,
+        "-f", "concat", "-safe", "0", "-i", "lista_clips.txt",
+        "-i", audio.name,
+        "-vf", vf_filter,
         "-shortest",
         "-c:v", "libx264",
         "-c:a", "aac",
         "-b:a", "192k",
         "-pix_fmt", "yuv420p",
-        str(output_path)
+        "video_final.mp4"
     ]
-    
-    # Executar no diretório temp para evitar problemas de caminho com legendas
-    result = subprocess.run(cmd_final, capture_output=True, text=True, cwd=temp_dir)
-    
-    if result.returncode != 0:
-        print(f"❌ Erro no render final: {result.stderr}")
-        # Tentar sem legenda se houver erro
+
+    try:
+        # Executar no temp_dir
+        subprocess.run(cmd_final, check=True, cwd=temp_dir, capture_output=True)
+        
+        # Mover vídeo final
+        video_final_temp = temp_dir / "video_final.mp4"
+        if video_final_temp.exists():
+            shutil.move(str(video_final_temp), str(output_path))
+            print(f"✅ Vídeo final renderizado: {output_path}")
+            
+            # Verificar duração do resultado
+            duracao_final = get_media_duration(output_path)
+            print(f"⏱️ Duração do vídeo: {duracao_final:.2f}s")
+        else:
+            raise Exception("Vídeo final não foi criado")
+            
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Erro no render: {e}")
+        
+        # Fallback: tentar sem legenda
         if tem_legenda:
             print("🔄 Tentando sem legenda...")
-            cmd_final_sem_legenda = [
-                "ffmpeg", "-y",
-                "-f", "concat", "-safe", "0", "-i", str(lista_clips),
-                "-i", str(audio),
-                "-vf", "scale=720:1280",
-                "-shortest",
-                "-c:v", "libx264",
-                "-c:a", "aac",
-                "-b:a", "192k",
-                "-pix_fmt", "yuv420p",
-                str(output_path)
-            ]
-            subprocess.run(cmd_final_sem_legenda, check=True)
+            cmd_final[cmd_final.index("-vf") + 1] = "scale=720:1280"
+            subprocess.run(cmd_final, check=True, cwd=temp_dir, capture_output=True)
+            
+            video_final_temp = temp_dir / "video_final.mp4"
+            if video_final_temp.exists():
+                shutil.move(str(video_final_temp), str(output_path))
+                print(f"✅ Vídeo final renderizado (sem legenda): {output_path}")
     
-    print(f"✅ Vídeo final renderizado: {output_path}")
-    
-    # Verificar o vídeo final
+    # Limpeza opcional
     try:
-        cmd_info = [
-            'ffprobe', '-v', 'quiet',
-            '-select_streams', 'v:0',
-            '-show_entries', 'stream=duration,width,height,nb_frames',
-            '-of', 'csv=p=0',
-            str(output_path)
-        ]
-        info_result = subprocess.run(cmd_info, capture_output=True, text=True)
-        if info_result.returncode == 0:
-            info = info_result.stdout.strip().split(',')
-            print(f"📊 Vídeo final: {info[2]}x{info[3]}, {info[0]}s, {info[1]} frames")
-        
-        tamanho_mb = output_path.stat().st_size / (1024 * 1024)
-        print(f"📊 Tamanho do vídeo: {tamanho_mb:.1f} MB")
+        # Manter apenas o vídeo final e a capa
+        for file in temp_dir.glob("*_norm.mp4"):
+            file.unlink()
     except:
-        print("📊 Estatísticas do vídeo não disponíveis")
+        pass
     
     return output_path

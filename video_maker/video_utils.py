@@ -61,51 +61,31 @@ def listar_imagens(diretorio):
     return sorted([str(f) for f in path.iterdir() if f.suffix.lower() in exts])
 
 
-def gerar_capa(imagem, titulo, largura=720, altura=1280, cor_texto="#6B10D3", cor_borda="#FFFFFF", tamanho_fonte=None, fontfile_path=None):
-    """
-    Gera capa PNG flexível para qualquer aspect ratio
-    
-    Args:
-        imagem: caminho da imagem de fundo
-        titulo: texto do título
-        largura: largura desejada (padrão 720 - vertical)
-        altura: altura desejada (padrão 1280 - vertical)
-        cor_texto: cor do texto em hex
-        cor_borda: cor da borda em hex  
-        tamanho_fonte: tamanho da fonte (calculado automaticamente se None)
-        fontfile_path: caminho para arquivo de fonte personalizada
-    """
+def gerar_capa(imagem, titulo, largura=720, altura=1280, cor_texto="#6B10D3", cor_borda="#FFFFFF"):
+    """Gera capa com fonte específica"""
     saida = Path("capa.png")
     
-    # Calcula tamanho da fonte baseado na altura se não especificado
-    if tamanho_fonte is None:
-        tamanho_fonte = int(altura * 0.026)  # 2.6% da altura
-    
-    # Escapa caracteres especiais para o FFmpeg
+    # Escapar caracteres especiais no texto
     txt = str(titulo).replace("\\", "\\\\").replace(":", r"\:").replace("'", r"\'")
     
-    # Configuração da fonte
-    font_config = f"fontfile='{fontfile_path}'" if fontfile_path else "font='Montserrat Black'"
-    
-    # Filtro complexo para scaling + texto centralizado
+    # Especificar fonte de forma robusta
     vf = (
         f"scale={largura}:{altura}:force_original_aspect_ratio=decrease,"
-        f"pad={largura}:{altura}:(ow-iw)/2:(oh-ih)/2:color=black,"
-        f"drawtext=text='{txt}':{font_config}:fontsize={tamanho_fonte}:"
+        f"pad={largura}:{altura}:(ow-iw)/2:(oh-ih)/2,"
+        f"drawtext=text='{txt}':font='Montserrat Black':fontsize=40:"  # Use fonte padrão
         f"fontcolor={cor_texto}:borderw=3:bordercolor={cor_borda}:"
-        f"x=(w-text_w)/2:y=(h-text_h)/2-{altura*0.04}"  # 4% da altura acima do centro
+        f"x=(w-text_w)/2:y=(h-text_h)/2-50"
     )
     
-    comando = [
-        "ffmpeg", "-y", 
-        "-i", str(imagem), 
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", str(imagem),
         "-vf", vf,
-        "-frames:v", "1", 
-        "-update", "1", 
+        "-frames:v", "1",
+        "-update", "1",
         str(saida)
     ]
-    
-    subprocess.run(comando, check=True, capture_output=True)
+    subprocess.run(cmd, check=True, capture_output=True)
     return saida
 
 #isso aqui é bom para dar erro.

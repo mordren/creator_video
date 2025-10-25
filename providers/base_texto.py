@@ -2,6 +2,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+import json
 from typing import Optional, Dict, Any, Type
 
 # ===== Tipos/Exceções =====
@@ -55,6 +56,7 @@ def make_provider(name: Optional[str], **kwargs) -> TextoProvider:
         raise ValueError(f"Provider '{resolved}' não encontrado. Disponíveis: {available}")
     return cls(**kwargs)  # type: ignore
 
+
 # === IMPORTAR PROVIDERS PARA REGISTRO AUTOMÁTICO ===
 try:
     from . import gemini_text  # Isso executa o @register_provider
@@ -65,3 +67,4 @@ try:
     from . import grok_text  # Novo provider Grok
 except ImportError as e:
     print(f"⚠️ Aviso: Não foi possível importar grok_text: {e}")
+

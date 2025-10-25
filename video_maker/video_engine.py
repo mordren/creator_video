@@ -6,6 +6,7 @@ import inspect
 
 # Factory de efeitos
 _efeitos_registry = {}
+_templates_registry = {}  # NOVO: Registry para templates
 
 def registrar_efeito(nome, funcao):
     """Registra um efeito no factory"""
@@ -21,6 +22,24 @@ def aplicar_efeito(nome_efeito, imagem_path, duracao):
 def listar_efeitos():
     """Lista todos os efeitos disponíveis"""
     return list(_efeitos_registry.keys())
+
+# NOVO: Funções para gerenciar templates
+def registrar_template(nome, modulo_path):
+    """Registra um template no factory"""
+    _templates_registry[nome] = modulo_path
+
+def obter_template(nome):
+    """Obtém a função render de um template"""
+    if nome not in _templates_registry:
+        raise ValueError(f"Template '{nome}' não encontrado. Templates disponíveis: {list(_templates_registry.keys())}")
+    
+    modulo_path = _templates_registry[nome]
+    modulo = __import__(modulo_path, fromlist=['render'])
+    return getattr(modulo, 'render')
+
+def listar_templates():
+    """Lista todos os templates disponíveis"""
+    return list(_templates_registry.keys())
 
 # Registrar efeitos disponíveis (usando os nomes das funções originais)
 try:
@@ -59,4 +78,17 @@ try:
 except ImportError as e:
     print(f"⚠️ Não foi possível registrar zoom_pulse: {e}")
 
-print(f"✅ Video Engine carregada com {len(_efeitos_registry)} efeitos")
+# NOVO: Registrar templates disponíveis
+try:
+    registrar_template('short_filosofia', 'video_maker.templates.short_filosofia')
+    print("✅ Template short_filosofia registrado")
+except Exception as e:
+    print(f"⚠️ Não foi possível registrar short_filosofia: {e}")
+
+try:
+    registrar_template('long_filosofia', 'video_maker.templates.long_filosofia')
+    print("✅ Template long_filosofia registrado")
+except Exception as e:
+    print(f"⚠️ Não foi possível registrar long_filosofia: {e}")
+
+print(f"✅ Video Engine carregada com {len(_efeitos_registry)} efeitos e {len(_templates_registry)} templates")

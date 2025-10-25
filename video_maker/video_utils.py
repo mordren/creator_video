@@ -61,9 +61,12 @@ def listar_imagens(diretorio):
     return sorted([str(f) for f in path.iterdir() if f.suffix.lower() in exts])
 
 
-def gerar_capa(imagem, titulo, largura=720, altura=1280, cor_texto="#6B10D3", cor_borda="#FFFFFF"):
+def gerar_capa(imagem, titulo, output_path=None, largura=720, altura=1280, cor_texto="#6B10D3", cor_borda="#FFFFFF"):
     """Gera capa com fonte específica"""
-    saida = Path("capa.png")
+    if output_path is None:
+        saida = Path("capa.png")
+    else:
+        saida = Path(output_path)
     
     # Escapar caracteres especiais no texto
     txt = str(titulo).replace("\\", "\\\\").replace(":", r"\:").replace("'", r"\'")
@@ -72,7 +75,7 @@ def gerar_capa(imagem, titulo, largura=720, altura=1280, cor_texto="#6B10D3", co
     vf = (
         f"scale={largura}:{altura}:force_original_aspect_ratio=decrease,"
         f"pad={largura}:{altura}:(ow-iw)/2:(oh-ih)/2,"
-        f"drawtext=text='{txt}':font='Montserrat Black':fontsize=40:"  # Use fonte padrão
+        f"drawtext=text='{txt}':font='Montserrat Black':fontsize=40:"
         f"fontcolor={cor_texto}:borderw=3:bordercolor={cor_borda}:"
         f"x=(w-text_w)/2:y=(h-text_h)/2-50"
     )
@@ -87,9 +90,6 @@ def gerar_capa(imagem, titulo, largura=720, altura=1280, cor_texto="#6B10D3", co
     ]
     subprocess.run(cmd, check=True, capture_output=True)
     return saida
-
-#isso aqui é bom para dar erro.
-#TODO corrigir essa parte de fonte.
 
 def gerarCapaPNG(imagem, titulo, w=720, h=1280, usar_fontfile=False, fontfile_path=r"C:\Windows\Fonts\Montserrat-Black.ttf"):
     saida = Path("capa.png")
@@ -149,3 +149,34 @@ def mixar_audio_voz_trilha(audio_voz, trilha_path, ganho_voz=0, ganho_musica=-15
     subprocess.run(cmd, check=True)
     print(f"✅ Áudio mixado salvo em: {saida}")
     return saida
+
+def quebrar_texto(texto, max_caracteres=18):
+    """Quebra o texto em múltiplas linhas de forma inteligente"""
+    palavras = texto.split()
+    if not palavras:
+        return texto
+    
+    linhas = []
+    linha_atual = []
+    
+    for palavra in palavras:
+        linha_teste = ' '.join(linha_atual + [palavra])
+        
+        if len(linha_teste) <= max_caracteres:
+            linha_atual.append(palavra)
+        else:
+            if linha_atual:
+                linhas.append(' '.join(linha_atual))
+            
+            if len(palavra) > max_caracteres:
+                partes = [palavra[i:i+max_caracteres-3] + "..." for i in range(0, len(palavra), max_caracteres-3)]
+                linha_atual = [partes[0]]
+                linhas.extend(partes[1:])
+            else:
+                linha_atual = [palavra]
+    
+    if linha_atual:
+        linhas.append(' '.join(linha_atual))
+    
+    linhas = [linha.strip() for linha in linhas if linha.strip()]
+    return '\n'.join(linhas)

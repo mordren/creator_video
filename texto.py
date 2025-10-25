@@ -5,152 +5,343 @@ import sys
 import random
 from pathlib import Path
 from typing import Dict, Any, Optional
+import logging
+import os
 
+from utils import count_words, obter_proximo_id
+
+# Configura o path para imports
 sys.path.append(str(Path(__file__).parent))
 
-from read_config import carregar_config_canal
-from providers.base_texto import make_provider
-from utils import count_words, extract_json_maybe, obter_proximo_id
-from crud.roteiro_manager import RoteiroManager
-from crud.canal_manager import CanalManager
-from crud.models import Roteiro, Canal
+logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
+logging.getLogger('sqlalchemy.pool').setLevel(logging.WARNING)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Silencia logs do TensorFlow se houver
+logging.basicConfig(level=logging.ERROR, format='%(message)s')
+
+try:
+    from read_config import carregar_config_canal
+    from providers.base_texto import make_provider, ModelParams
+    from utils import extract_json_maybe
+    from crud.roteiro_manager import RoteiroManager
+    from crud.canal_manager import CanalManager
+    from crud.models import Roteiro, Canal
+    from sqlmodel import select, Session
+except ImportError as e:
+    print(f"❌ Erro de importação: {e}")
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
 
 class TextGenerator:
     def __init__(self):
         self.roteiro_manager = RoteiroManager()
         self.canal_manager = CanalManager()
 
-    def gerar_roteiro(self, canal: str, linha_tema: Optional[str] = None, provider: Optional[str] = None) -> Dict[str, Any]:
-        """Gera um roteiro completo"""
-        config = carregar_config_canal(canal)
-        provider_name = provider or config.get('TEXT_PROVIDER', 'gemini')
-        
-        # Carrega tema aleatório se não especificado
-        if not linha_tema:
-            temas_file = config['PASTA_CANAL'] / config.get('TEMAS_FILE', 'temas.txt')
+    def limpar_json_aninhado(self, dados):
+        """Remove JSON aninhado dentro de 'texto' e deixa só o texto puro."""
+        import re, json
+        if not isinstance(dados, dict):
+            return dados
+        texto = dados.get("texto", "")
+        if isinstance(texto, str):
+            # remove cercas markdown e ```json
+            texto_limpo = re.sub(r"^```json|```$", "", texto.strip(), flags=re.IGNORECASE)
+            # tenta decodificar se ainda for um JSON stringificado
             try:
-                temas = [t.strip() for t in temas_file.read_text(encoding='utf-8').split('\n') if t.strip()]
-                linha_tema = random.choice(temas) if temas else "Reflexão Filosófica"
-                print(f"🎲 Tema aleatório: {linha_tema}")
-            except Exception as e:
-                print(f"❌ Erro ao carregar temas: {e}")
-                return None
+                interno = json.loads(texto_limpo)
+                if isinstance(interno, dict) and "texto" in interno:
+                    texto_limpo = interno["texto"]
+            except Exception:
+                pass
+            # desescapa aspas e \n
+            texto_limpo = texto_limpo.replace('\\"', '"').replace('\\\\n', '\n')
+            dados["texto"] = texto_limpo.strip()
+        return dados
 
-        # Prepara prompt
-        partes = [p.strip() for p in linha_tema.split(',', 1)]
-        tema = partes[0]
-        autor = partes[1] if len(partes) > 1 else "Reflexão Filosófica"
-        
-        prompt = self._construir_prompt(config, tema, autor)
-        if not prompt:
-            return None
-        
-        # Gera conteúdo
+    def carregar_schema(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Carrega o schema de validação do canal"""
         try:
-            texto_provider = make_provider(provider_name)
-            resultado = texto_provider.generate(prompt)
-            dados_json = extract_json_maybe(resultado)
+            pasta_canal = config['PASTA_CANAL']
+            schema_file = pasta_canal / config.get('SCHEMA_FILE', 'schema.json')
             
-            # Ajusta tamanho se necessário
-            dados_json = self._ajustar_tamanho_texto(dados_json, config.get('TAMANHO_MAX', 135), texto_provider)
+            if not schema_file.exists():
+                raise FileNotFoundError(f"Arquivo schema não encontrado: {schema_file}")
             
-            # Adiciona metadados
-            dados_json.update({
-                'canal': canal,
-                'linha_tema': linha_tema,
-                'provider': provider_name
-            })
+            with open(schema_file, 'r', encoding='utf-8') as f:
+                schema = json.load(f)
             
-            return dados_json
+            print(f"📋 Schema carregado: {len(schema.get('campos_obrigatorios', []))} campos obrigatórios")
+            return schema
+            
         except Exception as e:
-            print(f"❌ Erro na geração do roteiro: {e}")
-            return None
+            print(f"❌ Erro ao carregar schema: {e}")
+            raise
 
-    def _construir_prompt(self, config: Dict[str, Any], tema: str, autor: str) -> str:
-        """Constroi o prompt personalizado"""
+    def validar_json_contra_schema(self, dados: Dict[str, Any], schema: Dict[str, Any]) -> bool:
+        """Valida se o JSON gerado pela IA segue o schema do canal"""
+        campos_obrigatorios = schema.get('campos_obrigatorios', [])
+        
+        if not campos_obrigatorios:
+            print("⚠️ Schema sem campos obrigatórios definidos")
+            return True
+        
+        campos_faltantes = [campo for campo in campos_obrigatorios if campo not in dados]
+        
+        if campos_faltantes:
+            print(f"❌ Campos obrigatórios faltando: {campos_faltantes}")
+            print(f"📋 Campos esperados: {campos_obrigatorios}")
+            print(f"📦 Campos recebidos: {list(dados.keys())}")
+            return False
+        
+        print("✅ JSON validado contra schema com sucesso")
+        return True
+
+    def carregar_agente(self, config: Dict[str, Any], linha_tema: str = None, schema: Dict[str, Any] = None) -> str:
+        """Carrega e personaliza o template do agente"""
         try:
-            agente_file = config['PASTA_CANAL'] / config.get('AGENTE_FILE', 'agente.txt')
+            pasta_canal = config['PASTA_CANAL']
+            agente_file = pasta_canal / config.get('AGENTE_FILE', 'agente.txt')
+            
+            if not agente_file.exists():
+                raise FileNotFoundError(f"Arquivo do agente não encontrado: {agente_file}")
+            
             template = agente_file.read_text(encoding='utf-8')
             
-            schema_file = config['PASTA_CANAL'] / config.get('SCHEMA_FILE', 'schema.json')
-            schema_data = json.loads(schema_file.read_text(encoding='utf-8'))
+            # Se não foi passado um tema, pega um aleatório do arquivo de temas
+            if not linha_tema:
+                temas_file = pasta_canal / config.get('TEMAS_FILE', 'temas.txt')
+                if temas_file.exists():
+                    temas = temas_file.read_text(encoding='utf-8').strip().split('\n')
+                    temas = [tema.strip() for tema in temas if tema.strip()]
+                    if temas:
+                        linha_tema = random.choice(temas)
+                        print(f"🎲 Tema aleatório selecionado: {linha_tema}")
+                    else:
+                        raise ValueError("Arquivo de temas está vazio")
+                else:
+                    raise FileNotFoundError(f"Arquivo de temas não encontrado: {temas_file}")
             
+            # Processa a linha do tema (formato: "autor, assunto")
+            partes = [parte.strip() for parte in linha_tema.split(',', 1)]
+            
+            if len(partes) == 2:
+                tema, autor = partes
+            else:
+                # Se não tem vírgula, usa tudo como tema e autor desconhecido
+                tema = partes[0]
+                autor = "Reflexão Filosófica"
+
+            # ✅ CARREGA SCHEMA PARA PEGAR CAMPOS E EXEMPLO
+            schema_file = pasta_canal / config.get('SCHEMA_FILE', 'schema.json')
+            with open(schema_file, 'r', encoding='utf-8') as f:
+                schema_data = json.load(f)
+            
+            # ✅ PREPARA TODAS AS SUBSTITUIÇÕES
             substituicoes = {
                 '{tema}': tema,
                 '{autor}': autor,
                 '{TAMANHO_MAX}': str(config.get('TAMANHO_MAX', 135)),
+                '{DURACAO_MINUTOS}': str(config.get('DURACAO_MINUTOS', 1)),
                 '{campos_obrigatorios}': str(schema_data.get('campos_obrigatorios', [])),
                 '{exemplo_resposta}': schema_data.get('exemplo_resposta', '')
             }
             
+            # ✅ SUBSTITUI TODOS OS PLACEHOLDERS NO TEMPLATE
             for placeholder, valor in substituicoes.items():
-                template = template.replace(placeholder, str(valor))
+                if not isinstance(valor, str):
+                    valor = json.dumps(valor, ensure_ascii=False, indent=2)
+                template = template.replace(placeholder, valor)
+
+            
+            print(f"🎯 Tema: {tema}")
+            print(f"👤 Autor: {autor if autor else '(não especificado)'}")
             
             return template
+            
         except Exception as e:
-            print(f"❌ Erro ao construir prompt: {e}")
-            return ""
+            print(f"❌ Erro ao carregar agente: {e}")
+            raise
 
-    def _ajustar_tamanho_texto(self, dados_json: Dict[str, Any], tamanho_alvo: int, provider) -> Dict[str, Any]:
-        """Ajusta o texto para o tamanho desejado"""
-        faixa = [int(tamanho_alvo * 0.9), int(tamanho_alvo * 1.1)]
-        texto_atual = dados_json.get('texto', '')
-        
-        for tentativa in range(3):  # Máximo 3 tentativas
-            palavras = count_words(texto_atual)
-            if faixa[0] <= palavras <= faixa[1]:
-                break
-                
-            print(f"📏 Ajustando tamanho ({palavras} palavras, alvo: {tamanho_alvo})")
-            
-            if palavras < faixa[0]:
-                prompt = f"Expanda este texto para cerca de {tamanho_alvo} palavras: {texto_atual}"
-            else:
-                prompt = f"Reduza este texto para cerca de {tamanho_alvo} palavras: {texto_atual}"
-            
-            try:
-                novo_resultado = provider.generate(prompt)
-                dados_json = extract_json_maybe(novo_resultado)
-                texto_atual = dados_json.get('texto', '')
-            except Exception as e:
-                print(f"⚠️ Erro no ajuste de tamanho: {e}")
-                break
-        
-        return dados_json
-
-    def salvar_roteiro(self, dados: Dict, config: Dict) -> Dict:
-        """Salva roteiro completo (arquivos + banco)"""
+    def _construir_json_schema_gemini(self, schema_canal: Dict[str, Any]) -> Dict[str, Any]:
+        """Constrói JSON Schema para Gemini baseado no schema do canal"""
         try:
-            pasta_base = Path(config['PASTA_BASE'])
-            roteiro_id = dados.get('id_roteiro') or obter_proximo_id(pasta_base)
-            pasta_roteiro = pasta_base / roteiro_id
+            # Pega o exemplo do schema (pode ser dict ou string)
+            exemplo = schema_canal.get('exemplo_resposta', {})
             
-            # Cria pasta e salva arquivos
-            pasta_roteiro.mkdir(parents=True, exist_ok=True)
-            dados['id_roteiro'] = roteiro_id
+            # Se exemplo_resposta é string, tenta converter para dict
+            if isinstance(exemplo, str):
+                try:
+                    # Remove escapes desnecessários
+                    exemplo_limpo = exemplo.replace('\\"', '"').replace('\\n', '\n')
+                    exemplo = json.loads(exemplo_limpo)
+                except json.JSONDecodeError:
+                    print("⚠️ Não foi possível converter exemplo_resposta para dict, usando fallback")
+                    exemplo = {}
             
-            # Salva JSON
-            caminho_json = pasta_roteiro / f"{roteiro_id}.json"
-            with open(caminho_json, 'w', encoding='utf-8') as f:
-                json.dump(dados, f, ensure_ascii=False, indent=2)
+            properties = {}
+            campos_obrigatorios = schema_canal.get('campos_obrigatorios', [])
             
-            # Salva TXT
-            caminho_txt = pasta_roteiro / f"{roteiro_id}.txt"
-            with open(caminho_txt, 'w', encoding='utf-8') as f:
-                f.write(dados.get("texto_pt", dados.get("texto", "")))
+            for campo in campos_obrigatorios:
+                valor_exemplo = exemplo.get(campo)
+                
+                # Determina o tipo baseado no exemplo ou no nome do campo
+                if campo == 'tags' or isinstance(valor_exemplo, list):
+                    properties[campo] = {
+                        "type": "array", 
+                        "items": {"type": "string"}
+                    }
+                elif campo == 'texto' or campo == 'descricao' or campo == 'titulo' or campo == 'hook' or campo == 'hook_pt' or campo == 'thumb':
+                    properties[campo] = {"type": "string"}
+                elif isinstance(valor_exemplo, bool):
+                    properties[campo] = {"type": "boolean"}
+                elif isinstance(valor_exemplo, (int, float)):
+                    properties[campo] = {"type": "number"}
+                else:
+                    # Default para string
+                    properties[campo] = {"type": "string"}
             
-            # Salva no banco - CORREÇÃO AQUI
+            # ✅ CORREÇÃO: Remove additionalProperties que não é suportado pelo Gemini
+            json_schema = {
+                "type": "object",
+                "properties": properties,
+                "required": campos_obrigatorios
+                # ❌ REMOVIDO: "additionalProperties": False
+            }
+            
+            print(f"🎯 JSON Schema gerado para {len(properties)} campos: {list(properties.keys())}")
+            return json_schema
+            
+        except Exception as e:
+            print(f"❌ Erro ao construir JSON Schema: {e}")
+            # Fallback: schema básico sem additionalProperties
+            return {
+                "type": "object",
+                "properties": {
+                    "texto": {"type": "string"},
+                    "titulo": {"type": "string"},
+                    "descricao": {"type": "string"}
+                },
+                "required": ["texto", "titulo", "descricao"]
+            }
+
+    def gerar_roteiro(self, canal: str, linha_tema: Optional[str] = None, provider: Optional[str] = None) -> Dict[str, Any]:
+        """Gera um roteiro completo usando JSON Schema dinâmico"""
+        try:
+            # Carrega configuração do canal
+            config = carregar_config_canal(canal)
+            schema_canal = self.carregar_schema(config)
+            tamanho_texto = config.get('TAMANHO_MAX')
+
+            # Carrega e personaliza prompt do agente
+            prompt = self.carregar_agente(config, linha_tema, schema_canal)
+
+            # Cria provider
+            provider_name = provider or config.get('TEXT_PROVIDER', 'gemini_text')
+            texto_provider = make_provider(provider_name)
+            
+            print(f"🧠 Gerando roteiro com {provider_name.upper()}...")
+            
+            # ✅ CONSTRÓI JSON SCHEMA DINÂMICO
+            json_schema_gemini = self._construir_json_schema_gemini(schema_canal)
+            
+            # ✅ GERA com JSON Schema dinâmico se for Gemini
+            resultado = None
+            if provider_name == 'gemini_text' and hasattr(texto_provider, 'generate'):
+                print("🎯 Usando JSON Schema nativo do Gemini")
+                resultado = texto_provider.generate(prompt, json_schema=json_schema_gemini)
+            else:
+                print("⚡ Usando método tradicional")
+                resultado = texto_provider.generate(prompt)
+
+            # ✅ Para outros providers ou fallback, usa extração tradicional
+            if isinstance(resultado, str):
+                dados_json = extract_json_maybe(resultado)
+                dados_json = self.limpar_json_aninhado(dados_json)
+            else:
+                dados_json = resultado
+
+            faixa = [int(tamanho_texto * (1 - 0.10)), int(tamanho_texto * (1 + 0.10))]
+            attempts = 0
+            
+            while not faixa[0] <= count_words(dados_json.get('texto', '')) <= faixa[1] and attempts < 4:
+                print('tamanho:' + str(count_words(dados_json.get('texto'))))
+                print('Refazendo')
+                atual = count_words(dados_json.get('texto', ''))
+
+                if atual < faixa[0]:
+                    deficit = faixa[0] - atual
+                    print(f"Refazendo (faltam ~{deficit} palavras)")
+                    expand_prompt = (
+                        "You previously returned this JSON.\n"
+                        "Now EXPAND only the field 'texto' to reach a total length close to "
+                        f"{tamanho_texto} words (acceptable range {faixa[0]}–{faixa[1]} words). "
+                        f"Add about {abs(deficit)} more words by deepening reflection, repetition cadence, and gentle transitions. "
+                        "Do NOT change tone, structure, or metadata. Return the FULL JSON again.\n\n"
+                        + json.dumps(dados_json, ensure_ascii=False, indent=2)
+                    )
+
+                elif atual > faixa[1]:
+                    excesso = atual - faixa[1]
+                    print(f"Reduzindo (excesso de ~{excesso} palavras)")
+                    expand_prompt = (
+                        "You previously returned this JSON.\n"
+                        "Now REDUCE only the field 'texto' to stay near "
+                        f"{tamanho_texto} words (acceptable range {faixa[0]}–{faixa[1]} words). "
+                        "Remove redundancies or rephrase lightly to keep natural flow and rhythm. "
+                        "Do NOT change tone, structure, or metadata. Return the FULL JSON again.\n\n"
+                        + json.dumps(dados_json, ensure_ascii=False, indent=2)
+                    )
+
+                # ✅ CORREÇÃO CRÍTICA: Nas tentativas de refazer, também usa JSON Schema
+                if provider_name == 'gemini_text' and hasattr(texto_provider, 'generate'):
+                    resultado = texto_provider.generate(expand_prompt, json_schema=json_schema_gemini)
+                else:
+                    resultado = texto_provider.generate(expand_prompt)
+                    
+                # ✅ Processa o resultado
+                if isinstance(resultado, str):
+                    dados_json = extract_json_maybe(resultado)
+                    dados_json = self.limpar_json_aninhado(dados_json)
+                else:
+                    dados_json = resultado
+                    
+                attempts += 1
+
+                
+            # ✅ CORREÇÃO: Valida contra o schema
+            if not self.validar_json_contra_schema(dados_json, schema_canal):
+                print("❌ JSON não atende ao schema - parando execução")
+                return None
+            
+            
+            # Adiciona metadados
+            dados_json.update({
+                'canal': canal,
+                'linha_tema': linha_tema or "aleatório",
+                'provider': provider_name,
+                'modelo': config.get('MODEL_NAME', 'N/A')
+            })
+            
+            return dados_json
+            
+        except Exception as e:
+            print(f"❌ Erro na geração do roteiro: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
+
+    def _salvar_no_banco(self, dados: dict, config: dict) -> dict:
+        """Salva roteiro no banco de dados usando a nova abordagem com objetos"""
+        try:
+            # Busca ou cria o canal
             canal = self.canal_manager.buscar_por_nome(config.get('NOME'))
             if not canal:
-                # CORREÇÃO: Passa os parâmetros corretos para criar
-                canal = self.canal_manager.criar(
-                    nome=config.get('NOME'),
-                    config_path=str(config.get('PASTA_CANAL', ''))
-                )
+                canal = Canal(nome=config.get('NOME'), config_path=str(config.get('PASTA_CANAL', '')))
+                canal = self.canal_manager.criar(canal)
             
-            # CORREÇÃO: Cria objeto Roteiro e salva
+            # Cria o objeto Roteiro
             roteiro = Roteiro(
-                id_video=roteiro_id,
+                id_video=dados['id_roteiro'],
                 titulo=dados.get('titulo', 'Título temporário'),
                 texto=dados.get('texto', ''),
                 descricao=dados.get('descricao', ''),
@@ -160,50 +351,99 @@ class TextGenerator:
                 resolucao=config.get('RESOLUCAO', 'vertical')
             )
             
+            # Salva no banco
             roteiro_salvo = self.roteiro_manager.criar(roteiro)
             
-            return {
-                'id_roteiro': roteiro_id,
-                'pasta_roteiro': pasta_roteiro,
-                'arquivo_json': caminho_json,
-                'arquivo_txt': caminho_txt,
-                'id_banco': roteiro_salvo.id
-            }
+            return {'sucesso': True, 'id_banco': roteiro_salvo.id}
+                
         except Exception as e:
-            print(f"❌ Erro ao salvar roteiro: {e}")
-            return {}
+            return {'sucesso': False, 'erro': str(e)}
+
+    def salvar_roteiro_completo(self, dados: Dict, config: Dict) -> Dict:
+        """
+        Salva roteiro completo: pasta, arquivos e banco de dados
+        """
+        pasta_base = Path(config['PASTA_BASE'])
+        
+        # ✅ CORREÇÃO: Garantir que temos um ID válido
+        roteiro_id = dados.get('id_roteiro')
+        
+        # Se não tem ID ou é inválido, gerar novo
+        if not roteiro_id or not roteiro_id.isdigit() or roteiro_id == "Vídeos Automáticos":
+            roteiro_id = obter_proximo_id(pasta_base)
+            print(f"🆔 Gerado novo ID: {roteiro_id}")
+        
+        # Cria pasta do roteiro
+        pasta_roteiro = pasta_base / roteiro_id
+        pasta_roteiro.mkdir(parents=True, exist_ok=True)
+        
+        # Atualiza dados com ID do roteiro
+        dados['id_roteiro'] = roteiro_id
+        dados['canal'] = config.get('NOME')
+        
+        # Salva arquivos
+        caminho_json = pasta_roteiro / f"{roteiro_id}.json"
+        with open(caminho_json, 'w', encoding='utf-8') as f:
+            json.dump(dados, f, ensure_ascii=False, indent=2)
+        
+        # Salva texto em arquivo .txt
+        caminho_txt = pasta_roteiro / f"{roteiro_id}.txt"
+        texto_pt = dados.get("texto_pt", dados.get("texto", ""))
+        with open(caminho_txt, 'w', encoding='utf-8') as f:
+            f.write(texto_pt)
+        
+        # Salva no banco de dados
+        resultado_db = self._salvar_no_banco(dados, config)
+        
+        return {
+            'id_roteiro': roteiro_id,
+            'pasta_roteiro': pasta_roteiro,
+            'arquivo_json': caminho_json,
+            'arquivo_txt': caminho_txt,
+            'dados': dados,
+            'db_result': resultado_db
+        }
 
 def main():
     parser = argparse.ArgumentParser(description='Gerar roteiros usando IA')
     parser.add_argument('canal', help='Nome do canal')
-    parser.add_argument('linha_tema', nargs='?', help='Tema "autor, assunto" (opcional)')
-    parser.add_argument('--provider', help='Provedor de IA')    
+    parser.add_argument('linha_tema', nargs='?', help='Tema no formato "autor, assunto" (opcional - usa aleatório se não informado)')
+    parser.add_argument('--provider', help='Provedor de IA (gemini, grok, claude)')    
     
     args = parser.parse_args()
     
     try:
         generator = TextGenerator()
+        
+        # Gera roteiro (com tema aleatório se não especificado)
         roteiro = generator.gerar_roteiro(args.canal, args.linha_tema, args.provider)
         
         if not roteiro:
             print("❌ Falha na geração do roteiro")
             return 1
         
-        print(f"🎬 Roteiro gerado: {roteiro.get('titulo', 'N/A')}")
+        print(f"\n🎬 Roteiro gerado com sucesso!")
+        print(f"📺 Título: {roteiro.get('titulo', 'N/A')}")
+        print(f"📝 Descrição: {roteiro.get('descricao', 'N/A')}")
+        print(f"🏷️ Tags: {', '.join(roteiro.get('tags', []))}")
+        print(f"📊 Palavras-chave thumb: {roteiro.get('thumbnail_palavras', [])}")
         
         # Salva o roteiro
         config = carregar_config_canal(args.canal)
-        resultado = generator.salvar_roteiro(roteiro, config)
-        
-        if resultado:
-            print(f"💾 Salvo: {resultado['id_roteiro']} (BD: {resultado['id_banco']})")
-            return 0
+        resultado_salvo = generator.salvar_roteiro_completo(roteiro, config)
+
+        if resultado_salvo['db_result'].get('sucesso'):
+            print(f"💾 Salvo no banco com ID: {resultado_salvo['db_result'].get('id_banco', 'N/A')}")
+            print(f"📁 Pasta: {resultado_salvo['pasta_roteiro']}")
         else:
-            print("❌ Falha ao salvar roteiro")
-            return 1
+            print(f"⚠️ Erro ao salvar no banco: {resultado_salvo['db_result'].get('erro')}")
+        
+        return 0
         
     except Exception as e:
-        print(f"❌ Erro: {e}")
+        print(f"❌ Erro fatal: {e}")
+        import traceback
+        traceback.print_exc()
         return 1
 
 if __name__ == "__main__":

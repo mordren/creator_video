@@ -8,6 +8,9 @@ from pathlib import Path
 PASTA_BASE = Path(r"E:\Canal Religioso\roteiros")
 PASTA_CANAL = Path(r"C:\Users\mordren\Documents\creator\canais\filosofia")
 PASTA_VIDEOS = Path(r"E:\Canal Religioso\Vídeos")
+NOME = "Hope in Every Verse"
+LINK = "@hope_in_every_verse"
+
 
 # -------------------------- Parâmetros Comuns --------------------------------------
 IDIOMA = "en"

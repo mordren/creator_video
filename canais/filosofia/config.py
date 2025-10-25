@@ -10,8 +10,15 @@ from pathlib import Path
 PASTA_BASE = Path(r"E:\Canal Dark\Vídeos Automáticos")
 PASTA_CANAL = Path(__file__).parent  # Pasta atual do canal
 PASTA_VIDEOS = Path(r"E:\Canal Dark\Vídeos Automáticos\Vídeos")
+MUSICA = Path(r"C:\Users\mordren\Documents\creator\canais\filosofia\assets\music\filosofia.mp3")
+IMAGES_DIR_SHORT = Path(r"C:\Users\mordren\Documents\creator\canais\filosofia\assets\imagens_template")
 NOME = "Reflexões do Poder"
 LINK = "@reflexoes_do_poder"
+
+
+# Adicionar também templates específicos
+TEMPLATE_SHORT = 'short_filosofia'
+TEMPLATE_LONG = 'long_filosofia'  # Você pode criar este depois
 
 # -------------------------- Parâmetros Comuns --------------------------------------
 IDIOMA = "pt"
@@ -49,4 +56,3 @@ RESOLUCAO = "720x1280"
 FPS = 60
 FONTE = "Montserrat-Black"
 TAMANHO_FONTE = 90
-MUSICA = Path(r"C:\Users\mordren\Documents\creator\canais\filosofia\assets\music\filosofia.mp3")

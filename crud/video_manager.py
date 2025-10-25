@@ -32,7 +32,7 @@ class VideoManager:
         with Session(self.engine) as session:
             return session.get(Video, video_id)
     
-    def buscar_por_roteiro(self, roteiro_id: int) -> Optional[Video]:
+    def buscar_por_roteiro_id(self, roteiro_id: int) -> Optional[Video]:
         """Busca vídeo associado a um roteiro específico"""
         with Session(self.engine) as session:
             statement = select(Video).where(Video.roteiro_id == roteiro_id)
@@ -58,7 +58,7 @@ class VideoManager:
         with Session(self.engine) as session:
             try:
                 # Busca vídeo existente ou cria novo
-                video = self.buscar_por_roteiro(roteiro_id)
+                video = self.buscar_por_roteiro_id(roteiro_id)
                 
                 if video:
                     # Atualiza vídeo existente
@@ -91,22 +91,31 @@ class VideoManager:
                 return False
     
     # --- Operações Específicas de Vídeo ---
-    def salvar_info_video_renderizado(self, 
-                                    roteiro_id: int, 
-                                    arquivo_video: str,
-                                    audio_mixado: str = None) -> bool:
+    def salvar_info_video(self, 
+                         roteiro_id: int, 
+                         arquivo_video: str,
+                         duracao: int = None) -> bool:
         """Salva informações do vídeo renderizado"""
         with Session(self.engine) as session:
             try:
-                video = self.buscar_por_roteiro(roteiro_id)
+                video = self.buscar_por_roteiro_id(roteiro_id)
                 if video:
                     video.arquivo_video = arquivo_video
-                    if audio_mixado:
-                        video.audio_mixado = audio_mixado
+                    if duracao:
+                        video.duracao = duracao
                     session.commit()
                     return True
-                return False
-                
+                else:
+                    # Cria novo vídeo se não existir
+                    video = Video(
+                        roteiro_id=roteiro_id,
+                        arquivo_video=arquivo_video,
+                        duracao=duracao
+                    )
+                    session.add(video)
+                    session.commit()
+                    return True
+                    
             except Exception as e:
                 session.rollback()
                 print(f"❌ Erro ao salvar info vídeo: {e}")
@@ -119,12 +128,9 @@ class VideoManager:
         """Atualiza status de upload para uma plataforma"""
         with Session(self.engine) as session:
             try:
-                video = self.buscar_por_roteiro(roteiro_id)
+                video = self.buscar_por_roteiro_id(roteiro_id)
                 if video:
                     video.status_upload = status
-                    
-                    # Aqui você pode adicionar lógica específica por plataforma
-                    # se necessário no futuro
                     session.commit()
                     return True
                 return False
@@ -140,7 +146,7 @@ class VideoManager:
         """Atualiza métricas do vídeo"""
         with Session(self.engine) as session:
             try:
-                video = self.buscar_por_roteiro(roteiro_id)
+                video = self.buscar_por_roteiro_id(roteiro_id)
                 if video:
                     if visualizacao_total is not None:
                         video.visualizacao_total = visualizacao_total

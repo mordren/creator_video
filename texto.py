@@ -1,4 +1,3 @@
-# texto.py
 #!/usr/bin/env python3
 import argparse
 import json
@@ -9,7 +8,7 @@ from typing import Dict, Any, Optional
 import logging
 import os
 
-from utils import count_words
+from utils import count_words, obter_proximo_id
 
 # Configura o path para imports
 sys.path.append(str(Path(__file__).parent))
@@ -23,8 +22,10 @@ try:
     from read_config import carregar_config_canal
     from providers.base_texto import make_provider, ModelParams
     from utils import extract_json_maybe
-    from crud.manager import DatabaseManager
     from crud.roteiro_manager import RoteiroManager
+    from crud.canal_manager import CanalManager
+    from crud.models import Roteiro, Canal
+    from sqlmodel import select, Session
 except ImportError as e:
     print(f"❌ Erro de importação: {e}")
     import traceback
@@ -33,14 +34,10 @@ except ImportError as e:
 
 class TextGenerator:
     def __init__(self):
-        try:
-            self.db = DatabaseManager()
-        except Exception as e:
-            print(f"⚠️ Aviso: Não foi possível conectar ao banco: {e}")
-            self.db = None
+        self.roteiro_manager = RoteiroManager()
+        self.canal_manager = CanalManager()
 
-    
-    def limpar_json_aninhado(self,dados):
+    def limpar_json_aninhado(self, dados):
         """Remove JSON aninhado dentro de 'texto' e deixa só o texto puro."""
         import re, json
         if not isinstance(dados, dict):
@@ -61,7 +58,6 @@ class TextGenerator:
             dados["texto"] = texto_limpo.strip()
         return dados
 
-    
     def carregar_schema(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Carrega o schema de validação do canal"""
         try:
@@ -128,15 +124,14 @@ class TextGenerator:
             # Processa a linha do tema (formato: "autor, assunto")
             partes = [parte.strip() for parte in linha_tema.split(',', 1)]
             
-            # CORREÇÃO: Deve ser:
             if len(partes) == 2:
-                tema, autor = partes  # ← CORRETO: tema primeiro, autor depois
+                tema, autor = partes
             else:
                 # Se não tem vírgula, usa tudo como tema e autor desconhecido
                 tema = partes[0]
                 autor = "Reflexão Filosófica"
 
-    # ✅ CARREGA SCHEMA PARA PEGAR CAMPOS E EXEMPLO
+            # ✅ CARREGA SCHEMA PARA PEGAR CAMPOS E EXEMPLO
             schema_file = pasta_canal / config.get('SCHEMA_FILE', 'schema.json')
             with open(schema_file, 'r', encoding='utf-8') as f:
                 schema_data = json.load(f)
@@ -166,7 +161,6 @@ class TextGenerator:
         except Exception as e:
             print(f"❌ Erro ao carregar agente: {e}")
             raise
-
 
     def gerar_roteiro(self, canal: str, linha_tema: Optional[str] = None, provider: Optional[str] = None) -> Dict[str, Any]:
         """Gera um roteiro completo usando o provider configurado"""
@@ -243,13 +237,88 @@ class TextGenerator:
                 'modelo': config.get('MODEL_NAME', 'N/A')
             })
             
-            return dados_json  # ✅ CORREÇÃO: Retorna dados_json, não resultado
+            return dados_json
             
         except Exception as e:
             print(f"❌ Erro na geração do roteiro: {e}")
             import traceback
             traceback.print_exc()
             raise
+
+    def _salvar_no_banco(self, dados: dict, config: dict) -> dict:
+        """Salva roteiro no banco de dados usando a nova abordagem com objetos"""
+        try:
+            # Busca ou cria o canal
+            canal = self.canal_manager.buscar_por_nome(config.get('NOME'))
+            if not canal:
+                canal = Canal(nome=config.get('NOME'), config_path=str(config.get('PASTA_CANAL', '')))
+                canal = self.canal_manager.criar(canal)
+            
+            # Cria o objeto Roteiro
+            roteiro = Roteiro(
+                id_video=dados['id_roteiro'],
+                titulo=dados.get('titulo', 'Título temporário'),
+                texto=dados.get('texto', ''),
+                descricao=dados.get('descricao', ''),
+                tags=', '.join(dados.get('tags', [])),
+                thumb=dados.get('thumb', 'thumb_temporaria'),
+                canal_id=canal.id,
+                resolucao=config.get('RESOLUCAO', 'vertical')
+            )
+            
+            # Salva no banco
+            roteiro_salvo = self.roteiro_manager.criar(roteiro)
+            
+            return {'sucesso': True, 'id_banco': roteiro_salvo.id}
+                
+        except Exception as e:
+            return {'sucesso': False, 'erro': str(e)}
+
+    def salvar_roteiro_completo(self, dados: Dict, config: Dict) -> Dict:
+        """
+        Salva roteiro completo: pasta, arquivos e banco de dados
+        """
+        pasta_base = Path(config['PASTA_BASE'])
+        
+        # ✅ CORREÇÃO: Garantir que temos um ID válido
+        roteiro_id = dados.get('id_roteiro')
+        
+        # Se não tem ID ou é inválido, gerar novo
+        if not roteiro_id or not roteiro_id.isdigit() or roteiro_id == "Vídeos Automáticos":
+            roteiro_id = obter_proximo_id(pasta_base)
+            print(f"🆔 Gerado novo ID: {roteiro_id}")
+        
+        # Cria pasta do roteiro
+        pasta_roteiro = pasta_base / roteiro_id
+        pasta_roteiro.mkdir(parents=True, exist_ok=True)
+        
+        # Atualiza dados com ID do roteiro
+        dados['id_roteiro'] = roteiro_id
+        dados['canal'] = config.get('NOME')
+        
+        # Salva arquivos
+        caminho_json = pasta_roteiro / f"{roteiro_id}.json"
+        with open(caminho_json, 'w', encoding='utf-8') as f:
+            json.dump(dados, f, ensure_ascii=False, indent=2)
+        
+        # Salva texto em arquivo .txt
+        caminho_txt = pasta_roteiro / f"{roteiro_id}.txt"
+        texto_pt = dados.get("texto_pt", dados.get("texto", ""))
+        with open(caminho_txt, 'w', encoding='utf-8') as f:
+            f.write(texto_pt)
+        
+        # Salva no banco de dados
+        resultado_db = self._salvar_no_banco(dados, config)
+        
+        return {
+            'id_roteiro': roteiro_id,
+            'pasta_roteiro': pasta_roteiro,
+            'arquivo_json': caminho_json,
+            'arquivo_txt': caminho_txt,
+            'dados': dados,
+            'db_result': resultado_db
+        }
+
 def main():
     parser = argparse.ArgumentParser(description='Gerar roteiros usando IA')
     parser.add_argument('canal', help='Nome do canal')
@@ -261,9 +330,12 @@ def main():
     try:
         generator = TextGenerator()
         
-        
         # Gera roteiro (com tema aleatório se não especificado)
         roteiro = generator.gerar_roteiro(args.canal, args.linha_tema, args.provider)
+        
+        if not roteiro:
+            print("❌ Falha na geração do roteiro")
+            return 1
         
         print(f"\n🎬 Roteiro gerado com sucesso!")
         print(f"📺 Título: {roteiro.get('titulo', 'N/A')}")
@@ -271,15 +343,13 @@ def main():
         print(f"🏷️ Tags: {', '.join(roteiro.get('tags', []))}")
         print(f"📊 Palavras-chave thumb: {roteiro.get('thumbnail_palavras', [])}")
         
-        # Salva se solicitado
-
+        # Salva o roteiro
         config = carregar_config_canal(args.canal)
-
-        roteiro_manager = RoteiroManager(config.get('PASTA_BASE'))
-        resultado_salvo = roteiro_manager.salvar_roteiro_completo(roteiro, config)
+        resultado_salvo = generator.salvar_roteiro_completo(roteiro, config)
 
         if resultado_salvo['db_result'].get('sucesso'):
             print(f"💾 Salvo no banco com ID: {resultado_salvo['db_result'].get('id_banco', 'N/A')}")
+            print(f"📁 Pasta: {resultado_salvo['pasta_roteiro']}")
         else:
             print(f"⚠️ Erro ao salvar no banco: {resultado_salvo['db_result'].get('erro')}")
         

@@ -19,6 +19,8 @@ LINK = "@reflexoes_do_poder"
 # Adicionar também templates específicos
 TEMPLATE_SHORT = 'short_filosofia'
 TEMPLATE_LONG = 'long_filosofia'  # Você pode criar este depois
+RESOLUCAO_SHORT = "720x1280"  # Vertical para shorts
+RESOLUCAO_LONG = "1280x720"   # Horizontal para vídeos longos
 
 # -------------------------- Parâmetros Comuns --------------------------------------
 IDIOMA = "pt"

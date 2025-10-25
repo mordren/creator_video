@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+from pathlib import Path
+
+# -------------------------- Pastas -------------------------------------------------
+PASTA_BASE = Path(r"E:\Canal Terror")
+PASTA_CANAL = Path(r"C:\Users\mordren\Documents\creator\canais\terror")
+PASTA_VIDEOS = Path(r"E:\Canal Terror\Vídeos")
+NOME = "Garras no Telhado"
+LINK = "@garras_no_telhado"
+# -------------------------- Parâmetros Comuns --------------------------------------
+IDIOMA = "pt"
+TAMANHO_MAX = 130
+DURACAO_MIN = 25
+
+# -------------------------- Agente -------------------------------------------------
+AGENTE_FILE = "agente.txt"
+SCHEMA_FILE = "schema.json"
+TEMAS_FILE = "temas.txt"
+
+# -------------------------- TTS ----------------------------------------------------
+EDGE_TTS_VOICE = "pt-BR-AntonioNeural"
+EDGE_TTS_RATE = "+20%"
+EDGE_TTS_PITCH = "-2Hz"
+EDGE_TTS_LEGENDAS = True
+
+# Gemini TTS (premium)
+GEMINI_TTS_VOICE = "Algenib"
+GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts"
+GEMINI_TTS_BITRATE = "192k"
+GEMINI_TTS_PROMPT = (
+    "Leia em tom sombrio e misterioso, como uma narração de conto de terror. "
+    "Português brasileiro, fluidez contínua, sem pausas longas."
+)
+
+# -------------------------- Vídeo --------------------------------------------------
+RESOLUCAO = "720x1280"  # Vertical para shorts
+FPS = 60
+FONTE = "Montserrat-Black"
+TAMANHO_FONTE = 90
+MUSICA = Path(r"C:\Users\mordren\Documents\creator\canais\terror\assets\music\terror.mp3")
+
+# -------------------------- Imagens ------------------------------------------------
+IMAGES_DIR_SHORT = PASTA_BASE / "imagens_short"
+IMAGES_DIR_LONG = PASTA_BASE / "imagens_long"
+
+# -------------------------- Templates ----------------------------------------------
+TEMPLATE_SHORT = "short_sequencial"
+TEMPLATE_LONG = "long_terror"
+RESOLUCAO_SHORT = "720x1280"  # Vertical para shorts
+RESOLUCAO_LONG = "1280x720"   # Horizontal para vídeos longos

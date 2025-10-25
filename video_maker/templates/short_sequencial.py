@@ -1,4 +1,5 @@
-# short_filosofia.py - template simplificado
+#!/usr/bin/env python3
+# short_sequencial.py - Template para vídeos shorts sequenciais de terror
 import random
 import shutil
 import subprocess
@@ -12,17 +13,48 @@ from video_maker.video_utils import (
     preparar_diretorios_trabalho, limpar_diretorio_temp
 )
 
+def mixar_audio_com_musica(audio_voz, musica_path, ganho_musica=-15):
+    """Mixa áudio de voz com música de fundo"""
+    audio_path = Path(audio_voz)
+    musica = Path(musica_path)
+    
+    if not audio_path.exists():
+        raise FileNotFoundError(f"Áudio não encontrado: {audio_path}")
+    if not musica.exists():
+        raise FileNotFoundError(f"Música não encontrada: {musica}")
+
+    saida = audio_path.with_name(f"{audio_path.stem}_com_musica.mp3")
+    
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", str(audio_path),
+        "-i", str(musica),
+        "-filter_complex",
+        f"[0:a]volume=0dB[a0];"
+        f"[1:a]volume={ganho_musica}dB,aloop=loop=-1:size=2e+09[a1];"
+        f"[a0][a1]amix=inputs=2:duration=first:dropout_transition=2,"
+        f"dynaudnorm=f=250:g=3[a]",
+        "-map", "[a]",
+        "-c:a", "libmp3lame",
+        "-b:a", "192k",
+        "-ar", "48000",
+        str(saida)
+    ]
+
+    subprocess.run(cmd, check=True, capture_output=True)
+    return saida
+
 def render(audio_path: str, config: dict) -> Path:
     """
-    Template para vídeos curtos de filosofia VERTICAL (720x1280)
-    Versão simplificada e otimizada
+    Template para vídeos curtos sequenciais de terror VERTICAL (720x1280)
     """
     audio = Path(audio_path)
     
-    # Configurações básicas
+    # Configurações
     images_dir = Path(config.get('IMAGES_DIR_SHORT') or config.get('IMAGE_DIR') or "./imagens")
-    hook = config.get('hook', config.get('titulo', "REFLEXÕES FILOSÓFICAS"))
+    hook = config.get('hook', config.get('titulo', "HISTÓRIA DE TERROR"))
     num_imagens = config.get('num_imagens', 18)
+    musica_path = config.get('MUSICA')
     
     # Configurar diretórios
     output_dir, temp_dir = preparar_diretorios_trabalho(
@@ -39,20 +71,34 @@ def render(audio_path: str, config: dict) -> Path:
         if not imagens:
             raise ValueError(f"Nenhuma imagem encontrada em: {images_dir}")
         
-        random.shuffle(imagens)
-        imagens_selecionadas = imagens[:min(num_imagens, len(imagens))]
+        # Usar exatamente num_imagens, repetindo se necessário
+        imagens_selecionadas = []
+        while len(imagens_selecionadas) < num_imagens:
+            imagens_selecionadas.extend(imagens)
+        imagens_selecionadas = imagens_selecionadas[:num_imagens]
+        random.shuffle(imagens_selecionadas)
+        
         print(f"🎞️ Usando {len(imagens_selecionadas)} imagens")
         
         # 2. Obter duração do áudio
         audio_duration = get_media_duration(audio)
         print(f"⏱️ Duração do áudio: {audio_duration:.2f}s")
         
-        # 3. Gerar capa
+        # 3. Mixar áudio com música se disponível
+        audio_final = audio
+        if musica_path and Path(musica_path).exists():
+            print("🎵 Mixando áudio com música...")
+            audio_final = mixar_audio_com_musica(audio, musica_path)
+            audio_duration = get_media_duration(audio_final)
+            print(f"🎶 Áudio mixado: {audio_duration:.2f}s")
+        
+        # 4. Gerar capa
         capa_path = temp_dir / "capa.png"
         if imagens_selecionadas:
             gerar_capa_pillow(imagens_selecionadas[0], hook, capa_path)
+            print(f"🖼️ Capa gerada: {capa_path}")
         
-        # 4. Processar legendas
+        # 5. Processar legendas
         ass_path = temp_dir / "legenda.ass"
         tem_legenda = False
         
@@ -65,13 +111,13 @@ def render(audio_path: str, config: dict) -> Path:
             except Exception as e:
                 print(f"❌ Erro na legenda: {e}")
         
-        # 5. Criar frame da capa (3 segundos)
+        # 6. Criar frame da capa (3 segundos)
         video_id = audio.stem
         output_path = output_dir / f"{video_id}.mp4"
         frame_capa_path = temp_dir / "000_capa.mp4"
         criar_frame_estatico(capa_path, 3.0, frame_capa_path)
         
-        # 6. Processar imagens com efeitos
+        # 7. Processar imagens com efeitos
         rest = max(0.0, audio_duration - 3.0)
         imgs_restantes = imagens_selecionadas[1:]
         
@@ -90,6 +136,8 @@ def render(audio_path: str, config: dict) -> Path:
             base = rest / n
             durs = [max(duracao_minima, base)] * n
             durs[-1] += (rest - sum(durs))  # Ajuste fino
+            
+            print(f"📊 Durações calculadas: {[f'{d:.1f}s' for d in durs]}")
             
             # Gerar clipes com efeitos
             lista_clips = temp_dir / "lista_clips.txt"
@@ -117,16 +165,17 @@ def render(audio_path: str, config: dict) -> Path:
                                 # Limpar temporários
                                 Path(norm).unlink(missing_ok=True)
                                 Path(raw.filename).unlink(missing_ok=True)
+                                print(f"   ✅ {nome_arquivo}")
                     except Exception as e:
                         print(f"   ❌ Erro: {e}")
         
-        # 7. Render final
+        # 8. Render final
         print("🎥 Renderizando vídeo final...")
         
         # Copiar áudio para temp_dir
-        audio_temp = temp_dir / audio.name
+        audio_temp = temp_dir / audio_final.name
         if not audio_temp.exists():
-            shutil.copy2(audio, audio_temp)
+            shutil.copy2(audio_final, audio_temp)
         
         # Configurar comando FFmpeg
         vf_filter = "ass=legenda.ass" if tem_legenda else "scale=720:1280:flags=lanczos"
@@ -168,6 +217,8 @@ def render(audio_path: str, config: dict) -> Path:
         
     except Exception as e:
         print(f"❌ Erro no template: {e}")
+        import traceback
+        traceback.print_exc()
         return None
         
     finally:

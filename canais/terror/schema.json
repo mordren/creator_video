@@ -1,0 +1,15 @@
+{
+  "tipo": "json",
+  "campos_obrigatorios": ["texto", "titulo", "descricao", "hook", "tags", "thumb"],
+  "placeholder_tamanho": "{TAMANHO_MAX}",
+  "placeholder_tema": "{tema}",
+  "exemplo_resposta": {
+    "texto": "O corpo de Beatriz jazia com uma faca cravada no peito. O sangue escuro manchava o carpete branco. Era janeiro de 2008 em Porto Alegre. A festa terminara. A porta não foi arrombada. Sem sinais de luta. Jóias intactas. A bolsa ali. A polícia investiga convidados. Depoimentos contraditórios surgem. A amiga Mariana parecia nervosa demais. Mariana invejava a beleza e o sucesso de Beatriz. A formatura foi o estopim. Inveja virou ódio. Confrontada, confessou. A inveja pode ser mais mortal que qualquer estranho. O que você faria se visse esse mal em alguém próximo?",
+    "titulo": "Inveja que Mata | Caso Beatriz",
+    "descricao": "Um crime chocante em uma festa de formatura. Até onde a inveja pode levar?",
+    "hook": "A faca ainda pingava. Ninguém entrou.",
+    "tags": "#truecrime #crime #investigação #inveja",
+    "thumb": "faca sangue carpete"
+  },
+  "instrucoes_output": "Return ONLY pure JSON. Do NOT include markdown, comments, or escaped quotes."
+}

@@ -11,7 +11,7 @@ PASTA_VIDEOS = Path(r"E:\Canal Religioso\Vídeos")
 NOME = "Hope in Every Verse"
 LINK = "@hope_in_every_verse"
 
-
+RESOLUCAO_LONG = "1280x720"   # Horizontal para vídeos longos
 # -------------------------- Parâmetros Comuns --------------------------------------
 IDIOMA = "en"
 TAMANHO_MAX = 3000

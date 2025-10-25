@@ -4,8 +4,9 @@ UTILITÁRIOS DE VÍDEO - COMPARTILHÁVEIS ENTRE TODOS OS CANAIS
 import subprocess
 import shutil
 from pathlib import Path
+from PIL import Image, ImageDraw, ImageFont
 
-# Funções que ambos os sistemas usam
+# Funções básicas de mídia
 def get_media_duration(path):
     """Obtém a duração de um arquivo de mídia de forma robusta"""
     try:
@@ -13,7 +14,6 @@ def get_media_duration(path):
         if not path.exists():
             return 0.0
             
-        # Primeiro verifica se é um arquivo de áudio válido
         if path.suffix.lower() not in ['.mp3', '.wav', '.m4a', '.aac', '.flac']:
             return 0.0
             
@@ -26,131 +26,19 @@ def get_media_duration(path):
             return 0.0
             
         duration = resultado.stdout.strip()
-        if not duration:
-            return 0.0
+        return float(duration) if duration else 0.0
             
-        return float(duration)
     except Exception as e:
         print(f"Erro ao obter duração de {path}: {e}")
         return 0.0
 
-def safe_copy(src, dst):
-    src = Path(src).resolve()
-    dst = Path(dst).resolve()
-    if not src.exists():
-        raise FileNotFoundError(f"Arquivo não existe: {src}")
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(str(src), str(dst))
-
-def safe_move(src, dst):
-    src = Path(src).resolve()
-    dst = Path(dst).resolve()
-    if not src.exists():
-        raise FileNotFoundError(f"Arquivo não existe: {src}")
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    if dst.exists():
-        dst.unlink()
-    shutil.move(str(src), str(dst))
-
-
 def listar_imagens(diretorio):
+    """Lista imagens de um diretório"""
     exts = ('.jpg', '.jpeg', '.png', '.bmp')
     path = Path(diretorio)
-    if not path.exists():
-        return []
-    return sorted([str(f) for f in path.iterdir() if f.suffix.lower() in exts])
+    return sorted([str(f) for f in path.iterdir() if f.suffix.lower() in exts]) if path.exists() else []
 
-
-def gerar_capa(imagem, titulo, output_path=None, largura=720, altura=1280, cor_texto="#6B10D3", cor_borda="#FFFFFF"):
-    """Gera capa com fonte específica"""
-    if output_path is None:
-        saida = Path("capa.png")
-    else:
-        saida = Path(output_path)
-    
-    # Escapar caracteres especiais no texto
-    txt = str(titulo).replace("\\", "\\\\").replace(":", r"\:").replace("'", r"\'")
-    
-    # Especificar fonte de forma robusta
-    vf = (
-        f"scale={largura}:{altura}:force_original_aspect_ratio=decrease,"
-        f"pad={largura}:{altura}:(ow-iw)/2:(oh-ih)/2,"
-        f"drawtext=text='{txt}':font='Montserrat Black':fontsize=40:"
-        f"fontcolor={cor_texto}:borderw=3:bordercolor={cor_borda}:"
-        f"x=(w-text_w)/2:y=(h-text_h)/2-50"
-    )
-    
-    cmd = [
-        "ffmpeg", "-y",
-        "-i", str(imagem),
-        "-vf", vf,
-        "-frames:v", "1",
-        "-update", "1",
-        str(saida)
-    ]
-    subprocess.run(cmd, check=True, capture_output=True)
-    return saida
-
-def gerarCapaPNG(imagem, titulo, w=720, h=1280, usar_fontfile=False, fontfile_path=r"C:\Windows\Fonts\Montserrat-Black.ttf"):
-    saida = Path("capa.png")
-    cor_titulo = "#6B10D3"
-    cor_borda = "#FFFFFF"
-    txt = str(titulo).replace("\\", "\\\\").replace(":", r"\:").replace("'", r"\'")
-    font_opt = f"fontfile='{fontfile_path}'" if usar_fontfile else "font='Montserrat Black'"
-
-    vf = (
-        f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
-        f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,"
-        f"drawtext=text='{txt}':{font_opt}:fontsize=34:"
-        f"fontcolor={cor_titulo}:borderw=3:bordercolor={cor_borda}:"
-        f"x=(w-text_w)/2:y=(h-text_h)/2-50"
-    )
-    comando = ["ffmpeg", "-y", "-i", str(imagem), "-vf", vf, "-frames:v", "1", "-update", "1", str(saida)]
-    subprocess.run(comando, check=True)
-    return saida
-
-
-def mixar_audio_voz_trilha(audio_voz, trilha_path, ganho_voz=0, ganho_musica=-15):
-    """
-    Mixa a narração (voz) com a trilha musical, normalizando o volume final.
-    Salva o arquivo mixado no mesmo diretório do áudio original.
-    """
-    audio_path = Path(audio_voz)
-    trilha = Path(trilha_path)
-
-    if not audio_path.exists():
-        raise FileNotFoundError(f"Arquivo de voz não encontrado: {audio_path}")
-    if not trilha.exists():
-        raise FileNotFoundError(f"Trilha musical não encontrada: {trilha}")
-
-    # define saída
-    saida = audio_path.with_name(f"{audio_path.stem}_mixado.mp3")
-
-    # comando ffmpeg
-    cmd = [
-        "ffmpeg", "-y",
-        "-i", str(audio_path),
-        "-i", str(trilha),
-        "-filter_complex",
-        (
-            f"[0:a]volume={ganho_voz}dB[a0];"
-            f"[1:a]volume={ganho_musica}dB[a1];"
-            f"[a0][a1]amix=inputs=2:duration=first:dropout_transition=2,"
-            f"dynaudnorm=f=250:g=3[a]"
-        ),
-        "-map", "[a]",
-        "-c:a", "libmp3lame",   # codec seguro para MP3
-        "-b:a", "192k",
-        "-ar", "48000",
-        str(saida)
-    ]
-
-    print(f"🎧 Mixando: {audio_path.name} + {trilha.name}")
-    subprocess.run(cmd, check=True)
-    print(f"✅ Áudio mixado salvo em: {saida}")
-    return saida
-
-def quebrar_texto(texto, max_caracteres=18):
+def quebrar_texto(texto, max_caracteres=25):
     """Quebra o texto em múltiplas linhas de forma inteligente"""
     palavras = texto.split()
     if not palavras:
@@ -178,5 +66,132 @@ def quebrar_texto(texto, max_caracteres=18):
     if linha_atual:
         linhas.append(' '.join(linha_atual))
     
-    linhas = [linha.strip() for linha in linhas if linha.strip()]
-    return '\n'.join(linhas)
+    return '\n'.join([linha.strip() for linha in linhas if linha.strip()])
+
+# Funções de processamento de vídeo
+def criar_frame_estatico(imagem_path: Path, duracao: float, output_path: Path):
+    """Cria um vídeo com frame estático a partir de uma imagem"""
+    cmd = [
+        "ffmpeg", "-y",
+        "-loop", "1",
+        "-i", str(imagem_path),
+        "-t", str(duracao),
+        "-r", "30",
+        "-vf", "scale=720:1280:force_original_aspect_ratio=decrease:flags=lanczos,pad=720:1280:(ow-iw)/2:(oh-ih)/2:color=black",
+        "-c:v", "libx264",
+        "-preset", "veryfast",
+        "-crf", "21",
+        "-pix_fmt", "yuv420p",
+        str(output_path)
+    ]
+    subprocess.run(cmd, check=True, capture_output=True)
+    return output_path
+
+def normalizar_duracao(in_path, target_s, fps=30):
+    """Normaliza a duração de um vídeo para o tempo exato"""
+    in_path = Path(in_path)
+    if not in_path.exists():
+        return None
+    
+    out_path = in_path.with_name(in_path.stem + "_norm.mp4")
+    
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", str(in_path),
+        "-t", f"{target_s:.3f}",
+        "-c:v", "libx264",
+        "-preset", "veryfast",
+        "-crf", "21",
+        "-pix_fmt", "yuv420p",
+        "-r", str(fps),
+        str(out_path)
+    ]
+    
+    try:
+        subprocess.run(cmd, check=True, capture_output=True)
+        return str(out_path)
+    except subprocess.CalledProcessError:
+        return None
+
+# Funções de imagem com Pillow
+def gerar_capa_pillow(imagem_path, texto, output_path, largura=720, altura=1280):
+    """Gera capa usando Pillow - função compartilhável entre templates"""
+    with Image.open(imagem_path) as img:
+        img = img.convert('RGB')
+        img.thumbnail((largura, altura), Image.Resampling.LANCZOS)
+        background = Image.new('RGB', (largura, altura), (0, 0, 0))
+        offset = ((largura - img.width) // 2, (altura - img.height) // 2)
+        background.paste(img, offset)
+        img = background
+
+    draw = ImageDraw.Draw(img)
+    
+    # Configurações
+    tamanho_fonte = 52
+    margem = 60
+    
+    # Carregar fonte
+    try:
+        font = ImageFont.truetype("assets/Montserrat-Black.ttf", tamanho_fonte)
+    except:
+        try:
+            font = ImageFont.truetype("arial.ttf", tamanho_fonte)
+        except:
+            font = ImageFont.load_default()
+
+    # Quebrar texto
+    palavras = texto.split()
+    linhas = []
+    linha_atual = []
+    
+    for palavra in palavras:
+        linha_teste = ' '.join(linha_atual + [palavra])
+        bbox = draw.textbbox((0, 0), linha_teste, font=font)
+        if (bbox[2] - bbox[0]) <= (largura - margem):
+            linha_atual.append(palavra)
+        else:
+            if linha_atual:
+                linhas.append(' '.join(linha_atual))
+            linha_atual = [palavra]
+    
+    if linha_atual:
+        linhas.append(' '.join(linha_atual))
+
+    # Desenhar texto
+    altura_linha = tamanho_fonte + 15
+    y_inicio = (altura // 3) - (len(linhas) * altura_linha // 2)
+    
+    for i, linha in enumerate(linhas):
+        y_pos = y_inicio + (i * altura_linha)
+        bbox = draw.textbbox((0, 0), linha, font=font)
+        x_pos = (largura - (bbox[2] - bbox[0])) // 2
+        
+        # Borda branca
+        for dx, dy in [(-2,-2), (-2,2), (2,-2), (2,2)]:
+            draw.text((x_pos + dx, y_pos + dy), linha, font=font, fill=(255,255,255))
+        
+        # Texto roxo
+        draw.text((x_pos, y_pos), linha, font=font, fill=(106, 16, 211))
+
+    img.save(output_path, "PNG")
+    return True
+
+def preparar_diretorios_trabalho(output_dir):
+    """Prepara diretórios de trabalho e retorna paths"""
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    temp_dir = output_dir / "temp"
+    if temp_dir.exists():
+        shutil.rmtree(temp_dir)
+    temp_dir.mkdir(exist_ok=True)
+    
+    return output_dir, temp_dir
+
+def limpar_diretorio_temp(temp_dir):
+    """Limpa diretório temporário"""
+    try:
+        if temp_dir.exists():
+            shutil.rmtree(temp_dir)
+    except Exception as e:
+        print(f"⚠️ Erro na limpeza: {e}")

@@ -24,7 +24,7 @@ try:
     from providers.base_texto import make_provider, ModelParams
     from utils import extract_json_maybe
     from crud.manager import DatabaseManager
-    from crud.video_manager import VideoManager
+    from crud.roteiro_manager import RoteiroManager
 except ImportError as e:
     print(f"❌ Erro de importação: {e}")
     import traceback
@@ -250,25 +250,6 @@ class TextGenerator:
             import traceback
             traceback.print_exc()
             raise
-
-    def salvar_roteiro_completo(self, dados: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
-        """Salva roteiro no banco e sistema de arquivos"""
-        try:
-            # Inicializa gerenciador de vídeos
-            video_manager = VideoManager(config['PASTA_BASE'])
-            
-            # Salva no sistema de arquivos e banco
-            resultado = video_manager.salvar_video_completo(dados, dados['canal'], config)
-            
-            print(f"✅ Roteiro salvo com ID: {resultado['id_video']}")
-            print(f"📁 Pasta: {resultado['pasta_video']}")
-            
-            return resultado
-            
-        except Exception as e:
-            print(f"❌ Erro ao salvar roteiro: {e}")
-            raise
-
 def main():
     parser = argparse.ArgumentParser(description='Gerar roteiros usando IA')
     parser.add_argument('canal', help='Nome do canal')
@@ -279,6 +260,7 @@ def main():
     
     try:
         generator = TextGenerator()
+        
         
         # Gera roteiro (com tema aleatório se não especificado)
         roteiro = generator.gerar_roteiro(args.canal, args.linha_tema, args.provider)
@@ -292,7 +274,10 @@ def main():
         # Salva se solicitado
 
         config = carregar_config_canal(args.canal)
-        resultado_salvo = generator.salvar_roteiro_completo(roteiro, config)
+
+        roteiro_manager = RoteiroManager(config.get('PASTA_BASE'))
+        resultado_salvo = roteiro_manager.salvar_roteiro_completo(roteiro, config)
+
         if resultado_salvo['db_result'].get('sucesso'):
             print(f"💾 Salvo no banco com ID: {resultado_salvo['db_result'].get('id_banco', 'N/A')}")
         else:

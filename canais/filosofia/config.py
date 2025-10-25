@@ -10,6 +10,8 @@ from pathlib import Path
 PASTA_BASE = Path(r"E:\Canal Dark\Vídeos Automáticos")
 PASTA_CANAL = Path(__file__).parent  # Pasta atual do canal
 PASTA_VIDEOS = Path(r"E:\Canal Dark\Vídeos Automáticos\Vídeos")
+NOME = "Reflexões do Poder"
+LINK = "@reflexoes_do_poder"
 
 # -------------------------- Parâmetros Comuns --------------------------------------
 IDIOMA = "pt"

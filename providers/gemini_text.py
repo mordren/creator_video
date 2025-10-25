@@ -35,44 +35,108 @@ class GeminiTextProvider(TextoProvider):
         # Remove quebras de linha duplicadas e espaços inúteis
         text = text.strip()
 
-        # Caso 1: JSON puro
+        # PRÉ-PROCESSAMENTO: Corrige escapes problemáticos antes de qualquer tentativa
+        # Remove escapes desnecessários de aspas simples (o problema principal)
+        text = re.sub(r"(?<!\\)\\'", "'", text)
+        # Preserva escapes válidos de aspas duplas, mas remove os desnecessários
+        text = re.sub(r'(?<![\\"])"(?![\\"])', '"', text)
+        # Remove barras invertidas desnecessárias
+        text = text.replace('\\\\', '\\')
+
+        # Caso 1: JSON puro (agora com escapes corrigidos)
         try:
             return json.loads(text)
-        except Exception:
-            pass
+        except Exception as e1:
+            print(f"❌ JSON puro falhou: {e1}")
 
         # Caso 2: JSON dentro de aspas (duplas ou simples)
         if (text.startswith('"') and text.endswith('"')) or (text.startswith("'") and text.endswith("'")):
-            text = text[1:-1]
-        text = text.replace('\\"', '"').replace("\\'", "'").replace("\\n", "\n")
-
-        try:
-            return json.loads(text)
-        except Exception:
-            pass
+            unquoted_text = text[1:-1]
+            # Aplica limpeza adicional no texto sem aspas
+            unquoted_text = unquoted_text.replace('\\"', '"').replace("\\'", "'").replace("\\n", "\n")
+            try:
+                return json.loads(unquoted_text)
+            except Exception as e2:
+                print(f"❌ JSON com aspas externas falhou: {e2}")
+                # Tenta o texto sem aspas como JSON direto
+                try:
+                    return json.loads(unquoted_text)
+                except Exception:
+                    pass
 
         # Caso 3: JSON dentro de string Python
         try:
             maybe = ast.literal_eval(text)
-            if isinstance(maybe, str) and maybe.strip().startswith("{"):
-                return json.loads(maybe)
-            if isinstance(maybe, dict):
+            if isinstance(maybe, str):
+                # Se é uma string, tenta extrair JSON dela
+                cleaned_str = re.sub(r"(?<!\\)\\'", "'", maybe)
+                try:
+                    return json.loads(cleaned_str)
+                except Exception:
+                    # Tenta encontrar JSON dentro da string
+                    match = re.search(r'\{[\s\S]*\}', cleaned_str)
+                    if match:
+                        return json.loads(match.group(0))
+            elif isinstance(maybe, dict):
                 return maybe
-        except Exception:
-            pass
+        except Exception as e3:
+            print(f"❌ ast.literal_eval falhou: {e3}")
 
-        # Caso 4: JSON dentro de bloco markdown interno
-        match = re.search(r'\{[\s\S]*\}', text)
-        if match:
-            try:
-                return json.loads(match.group(0))
-            except Exception:
-                pass
+        # Caso 4: Reparação avançada - converte aspas simples em aspas duplas para chaves/valores
+        try:
+            # Padrão para identificar chaves e valores entre aspas simples
+            repaired = re.sub(r"'([^']*)'", r'"\1"', text)
+            # Corrige arrays com aspas simples
+            repaired = re.sub(r"\[\s*'([^']*)'\s*\]", r'["\1"]', repaired)
+            repaired = re.sub(r"\[\s*'([^']*)',\s*'([^']*)'\s*\]", r'["\1", "\2"]', repaired)
+            
+            return json.loads(repaired)
+        except Exception as e4:
+            print(f"❌ Reparação avançada falhou: {e4}")
+
+        # Caso 5: Extração por regex robusta
+        try:
+            # Procura por qualquer objeto JSON, mesmo com formatação ruim
+            json_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
+            matches = re.findall(json_pattern, text, re.DOTALL)
+            
+            for match in matches:
+                try:
+                    # Limpa o match encontrado
+                    cleaned_match = re.sub(r"(?<!\\)\\'", "'", match)
+                    cleaned_match = re.sub(r'\s+', ' ', cleaned_match)  # Normaliza espaços
+                    return json.loads(cleaned_match)
+                except Exception:
+                    continue
+        except Exception as e5:
+            print(f"❌ Extração por regex falhou: {e5}")
+
+        # Caso 6: Último recurso - tenta carregar linha por linha
+        try:
+            lines = text.split('\n')
+            json_lines = []
+            in_json = False
+            
+            for line in lines:
+                line = line.strip()
+                if line.startswith('{') or in_json:
+                    json_lines.append(line)
+                    in_json = True
+                if line.endswith('}'):
+                    break
+            
+            if json_lines:
+                json_text = ' '.join(json_lines)
+                # Aplica limpeza final
+                json_text = re.sub(r"(?<!\\)\\'", "'", json_text)
+                return json.loads(json_text)
+        except Exception as e6:
+            print(f"❌ Extração por linhas falhou: {e6}")
 
         # Se falhar tudo, loga o problema
         print("❌ Falha ao decodificar JSON — conteúdo parcial:")
         print(text[:500] + ("..." if len(text) > 500 else ""))
-        raise ValueError("❌ Nenhum JSON válido encontrado na resposta.")
+        raise ValueError("❌ Nenhum JSON válido encontrado na resposta após múltiplas tentativas.")
 
 
     # === Geração ===

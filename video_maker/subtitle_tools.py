@@ -112,7 +112,95 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     except Exception as e:
         print(f"❌ Erro ao salvar arquivo ASS: {e}")
         return False
+    
+def srt_to_ass_simples(srt_file, ass_file, orientacao="vertical"):
+    """Converte SRT em ASS karaokê melhorado. 
+       - vertical → 4-6 palavras por linha
+       - horizontal → 6-8 palavras por linha
+    """
+    subs = pysrt.open(srt_file, encoding="utf-8")
 
+    header = """[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Normal,Montserrat Black,120,&H00FFFFFF,&H000000FF,&H00555555,&H00000000,-1,0,0,0,100,100,0,0,1,1,0,5,10,10,150,1
+Style: Highlight,Montserrat Black,120,&H00FFFFFF,&H000000FF,&H00555555,&H00000000,-1,0,0,0,100,100,0,0,1,1,0,5,10,10,150,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+"""
+    lines = [header]
+
+    def clean_text(text):
+        return re.sub(r'<[^>]+>', '', text).strip()
+
+    # Define quantas palavras por bloco (MÁXIMO 8)
+    if orientacao == "horizontal":
+        palavras_por_bloco = 10  # Reduzido para máximo 8
+    else:
+        palavras_por_bloco = 4  # Reduzido para máximo 6
+
+    for sub in subs:
+        duracao_total_ms = sub.end.ordinal - sub.start.ordinal
+        texto_limpo = clean_text(sub.text)
+        todas_palavras = texto_limpo.split()
+        if not todas_palavras:
+            continue
+
+        # Divide em blocos menores (máximo 8 palavras)
+        blocos = []
+        palavras_temp = []
+        
+        for palavra in todas_palavras:
+            palavras_temp.append(palavra)
+            # Se atingiu o limite OU a próxima palavra fizer passar de 8
+            if len(palavras_temp) >= palavras_por_bloco:
+                blocos.append(palavras_temp)
+                palavras_temp = []
+        
+        # Adiciona o último bloco se não estiver vazio
+        if palavras_temp:
+            blocos.append(palavras_temp)
+
+        if not blocos:
+            continue
+
+        duracao_por_bloco = duracao_total_ms // len(blocos)
+
+        for bloco_idx, bloco in enumerate(blocos):
+            inicio_bloco = sub.start.ordinal + (bloco_idx * duracao_por_bloco)
+            duracao_por_palavra = duracao_por_bloco // len(bloco)
+
+            # Prepara o texto do bloco com destaque na palavra atual
+            texto_bloco = []
+            for palavra_idx, palavra in enumerate(bloco):
+                inicio_palavra = inicio_bloco + (palavra_idx * duracao_por_palavra)
+                fim_palavra = inicio_palavra + duracao_por_palavra
+
+                start_ass = format_time_ass(pysrt.SubRipTime(milliseconds=int(inicio_palavra)))
+                end_ass = format_time_ass(pysrt.SubRipTime(milliseconds=int(fim_palavra)))
+
+                # Constrói o texto com destaque apenas na palavra atual
+                texto_linha = []
+                for j, w in enumerate(bloco):
+                    if j == palavra_idx:
+                        # Palavra atual - maior e com destaque
+                        texto_linha.append(f"{{\\rHighlight}}{to_plain_upper(w)}{{\\r}}")
+                    else:
+                        # Outras palavras - tamanho normal
+                        texto_linha.append(to_plain_upper(w))
+
+                linha = f"Dialogue: 0,{start_ass},{end_ass},Normal,,0,0,0,,{' '.join(texto_linha)}\n"
+                lines.append(linha)
+
+    with open(ass_file, "w", encoding="utf-8") as f:
+        f.writelines(lines)
+    
 # Função de teste
 def testar_conversao():
     """Testa a conversão SRT para ASS"""

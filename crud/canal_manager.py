@@ -9,10 +9,9 @@ class CanalManager:
     def __init__(self):
         self.engine = engine
     
-    def criar(self, nome: str, config_path: str) -> Canal:
-        """Cria um novo canal"""
+    def criar(self, canal: Canal, config: dict) -> Canal:
+        """Cria um novo canal no banco"""
         with Session(self.engine) as session:
-            canal = Canal(nome=nome, config_path=config_path)
             session.add(canal)
             session.commit()
             session.refresh(canal)

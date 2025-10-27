@@ -11,8 +11,12 @@ NOME = "Garras no Telhado"
 LINK = "@garras_no_telhado"
 # -------------------------- Parâmetros Comuns --------------------------------------
 IDIOMA = "pt"
-TAMANHO_MAX = 130
-DURACAO_MIN = 25
+TAMANHO_MAX_SHORT = 130
+TAMANHO_MAX_LONG = 3000
+
+# ✅ NOVO: Durações separadas para short e long
+DURACAO_MIN_SHORT = 1
+DURACAO_MIN_LONG = 25
 
 # -------------------------- Agente -------------------------------------------------
 AGENTE_FILE = "agente.txt"
@@ -24,6 +28,7 @@ EDGE_TTS_VOICE = "pt-BR-AntonioNeural"
 EDGE_TTS_RATE = "+20%"
 EDGE_TTS_PITCH = "-2Hz"
 EDGE_TTS_LEGENDAS = True
+EDGE_TTS_AJUSTAR_TIMESTAMPS: True  
 
 # Gemini TTS (premium)
 GEMINI_TTS_VOICE = "Algenib"

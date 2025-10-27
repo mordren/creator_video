@@ -37,7 +37,203 @@ class TextGenerator:
         self.roteiro_manager = RoteiroManager()
         self.canal_manager = CanalManager()
 
-    # ... (mantenha todos os métodos existentes até gerar_roteiro) ...
+    def limpar_json_aninhado(self, dados):
+        """Remove JSON aninhado dentro de 'texto' e deixa só o texto puro."""
+        import re, json
+        if not isinstance(dados, dict):
+            return dados
+        texto = dados.get("texto", "")
+        if isinstance(texto, str):
+            # remove cercas markdown e ```json
+            texto_limpo = re.sub(r"^```json|```$", "", texto.strip(), flags=re.IGNORECASE)
+            # tenta decodificar se ainda for um JSON stringificado
+            try:
+                interno = json.loads(texto_limpo)
+                if isinstance(interno, dict) and "texto" in interno:
+                    texto_limpo = interno["texto"]
+            except Exception:
+                pass
+            # desescapa aspas e \n
+            texto_limpo = texto_limpo.replace('\\"', '"').replace('\\\\n', '\n')
+            dados["texto"] = texto_limpo.strip()
+        return dados
+
+    def carregar_schema(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Carrega o schema de validação do canal"""
+        try:
+            pasta_canal = config['PASTA_CANAL']
+            schema_file = pasta_canal / config.get('SCHEMA_FILE', 'schema.json')
+            
+            if not schema_file.exists():
+                raise FileNotFoundError(f"Arquivo schema não encontrado: {schema_file}")
+            
+            with open(schema_file, 'r', encoding='utf-8') as f:
+                schema = json.load(f)
+            
+            print(f"📋 Schema carregado: {len(schema.get('campos_obrigatorios', []))} campos obrigatórios")
+            return schema
+            
+        except Exception as e:
+            print(f"❌ Erro ao carregar schema: {e}")
+            raise
+
+    def validar_json_contra_schema(self, dados: Dict[str, Any], schema: Dict[str, Any]) -> bool:
+        """Valida se o JSON gerado pela IA segue o schema do canal"""
+        campos_obrigatorios = schema.get('campos_obrigatorios', [])
+        
+        if not campos_obrigatorios:
+            print("⚠️ Schema sem campos obrigatórios definidos")
+            return True
+        
+        campos_faltantes = [campo for campo in campos_obrigatorios if campo not in dados]
+        
+        if campos_faltantes:
+            print(f"❌ Campos obrigatórios faltando: {campos_faltantes}")
+            print(f"📋 Campos esperados: {campos_obrigatorios}")
+            print(f"📦 Campos recebidos: {list(dados.keys())}")
+            return False
+        
+        print("✅ JSON validado contra schema com sucesso")
+        return True
+
+    def carregar_agente(self, config: Dict[str, Any], linha_tema: str = None, 
+                        schema: Dict[str, Any] = None, tipo_video: str = 'short') -> str:
+        """Carrega e personaliza o template do agente"""
+        try:
+            pasta_canal = config['PASTA_CANAL']
+            agente_file = pasta_canal / config.get('AGENTE_FILE', 'agente.txt')
+            
+            if not agente_file.exists():
+                raise FileNotFoundError(f"Arquivo do agente não encontrado: {agente_file}")
+            
+            template = agente_file.read_text(encoding='utf-8')
+            
+            # Se não foi passado um tema, pega um aleatório do arquivo de temas
+            if not linha_tema:
+                temas_file = pasta_canal / config.get('TEMAS_FILE', 'temas.txt')
+                if temas_file.exists():
+                    temas = temas_file.read_text(encoding='utf-8').strip().split('\n')
+                    temas = [tema.strip() for tema in temas if tema.strip()]
+                    if temas:
+                        linha_tema = random.choice(temas)
+                        print(f"🎲 Tema aleatório selecionado: {linha_tema}")
+                    else:
+                        raise ValueError("Arquivo de temas está vazio")
+                else:
+                    raise FileNotFoundError(f"Arquivo de temas não encontrado: {temas_file}")
+            
+            # Processa a linha do tema (formato: "autor, assunto")
+            partes = [parte.strip() for parte in linha_tema.split(',', 1)]
+            
+            if len(partes) == 2:
+                tema, autor = partes
+            else:
+                # Se não tem vírgula, usa tudo como tema e autor desconhecido
+                tema = partes[0]
+                autor = "Reflexão Filosófica"
+
+            # ✅ CARREGA SCHEMA PARA PEGAR CAMPOS E EXEMPLO
+            schema_file = pasta_canal / config.get('SCHEMA_FILE', 'schema.json')
+            with open(schema_file, 'r', encoding='utf-8') as f:
+                schema_data = json.load(f)
+            
+            # ✅ NOVO: Determina tamanho máximo baseado no tipo de vídeo
+            if tipo_video == 'short':
+                tamanho_max = config.get('TAMANHO_MAX_SHORT', 130)
+                duracao_minutos = config.get('DURACAO_MIN_SHORT', 1)
+            else:  # long
+                tamanho_max = config.get('TAMANHO_MAX_LONG', 130)
+                duracao_minutos = config.get('DURACAO_MIN_LONG', 3)
+            
+            # ✅ PREPARA TODAS AS SUBSTITUIÇÕES
+            substituicoes = {
+                '{tema}': tema,
+                '{autor}': autor,
+                '{TAMANHO_MAX}': str(tamanho_max),  # ✅ NOVO: usa valor dinâmico
+                '{DURACAO_MINUTOS}': str(duracao_minutos),  # ✅ NOVO: usa valor dinâmico
+                '{campos_obrigatorios}': str(schema_data.get('campos_obrigatorios', [])),
+                '{exemplo_resposta}': schema_data.get('exemplo_resposta', '')
+            }
+            
+            # ✅ SUBSTITUI TODOS OS PLACEHOLDERS NO TEMPLATE
+            for placeholder, valor in substituicoes.items():
+                if not isinstance(valor, str):
+                    valor = json.dumps(valor, ensure_ascii=False, indent=2)
+                template = template.replace(placeholder, valor)
+
+            
+            print(f"🎯 Tema: {tema}")
+            print(f"👤 Autor: {autor if autor else '(não especificado)'}")
+            print(f"📏 Tamanho máximo: {tamanho_max} palavras")
+            print(f"⏱️ Duração: {duracao_minutos} minutos")
+            
+            return template
+            
+        except Exception as e:
+            print(f"❌ Erro ao carregar agente: {e}")
+            raise
+
+    def _construir_json_schema_gemini(self, schema_canal: Dict[str, Any]) -> Dict[str, Any]:
+        """Constrói JSON Schema para Gemini baseado no schema do canal"""
+        try:
+            # Pega o exemplo do schema (pode ser dict ou string)
+            exemplo = schema_canal.get('exemplo_resposta', {})
+            
+            # Se exemplo_resposta é string, tenta converter para dict
+            if isinstance(exemplo, str):
+                try:
+                    # Remove escapes desnecessários
+                    exemplo_limpo = exemplo.replace('\\"', '"').replace('\\n', '\n')
+                    exemplo = json.loads(exemplo_limpo)
+                except json.JSONDecodeError:
+                    print("⚠️ Não foi possível converter exemplo_resposta para dict, usando fallback")
+                    exemplo = {}
+            
+            properties = {}
+            campos_obrigatorios = schema_canal.get('campos_obrigatorios', [])
+            
+            for campo in campos_obrigatorios:
+                valor_exemplo = exemplo.get(campo)
+                
+                # Determina o tipo baseado no exemplo ou no nome do campo
+                if campo == 'tags' or isinstance(valor_exemplo, list):
+                    properties[campo] = {
+                        "type": "array", 
+                        "items": {"type": "string"}
+                    }
+                elif campo == 'texto' or campo == 'descricao' or campo == 'titulo' or campo == 'hook' or campo == 'hook_pt' or campo == 'thumb':
+                    properties[campo] = {"type": "string"}
+                elif isinstance(valor_exemplo, bool):
+                    properties[campo] = {"type": "boolean"}
+                elif isinstance(valor_exemplo, (int, float)):
+                    properties[campo] = {"type": "number"}
+                else:
+                    # Default para string
+                    properties[campo] = {"type": "string"}
+            
+            # ✅ CORREÇÃO: Remove additionalProperties que não é suportado pelo Gemini
+            json_schema = {
+                "type": "object",
+                "properties": properties,
+                "required": campos_obrigatorios
+                # ❌ REMOVIDO: "additionalProperties": False
+            }
+            
+            print(f"🎯 JSON Schema gerado para {len(properties)} campos: {list(properties.keys())}")
+            return json_schema
+            
+        except Exception as e:
+            print(f"❌ Erro ao construir JSON Schema: {e}")
+            # Fallback: schema básico sem additionalProperties
+            return {
+                "type": "object",
+                "properties": {
+                    "texto": {"type": "string"},
+                    "titulo": {"type": "string"},
+                    "descricao": {"type": "string"}
+                },
+                "required": ["texto", "titulo", "descricao"]
+            }
 
     def gerar_roteiro(self, canal: str, linha_tema: Optional[str] = None, 
                      provider: Optional[str] = None, tipo_video: str = 'short') -> Dict[str, Any]:
@@ -46,18 +242,23 @@ class TextGenerator:
             # Carrega configuração do canal
             config = carregar_config_canal(canal)
             schema_canal = self.carregar_schema(config)
-            tamanho_texto = config.get('TAMANHO_MAX')
-
-            # ✅ NOVO: Determina resolução baseada no tipo de vídeo
+            
+            # ✅ NOVO: Determina tamanho máximo e resolução baseada no tipo de vídeo
             if tipo_video == 'short':
+                tamanho_texto = config.get('TAMANHO_MAX_SHORT', 130)
                 resolucao = config.get('RESOLUCAO_SHORT', '720x1280')
-                print(f"🎯 Gerando roteiro para SHORT (resolução: {resolucao})")
+                print(f"🎯 Gerando roteiro para SHORT")
+                print(f"   📏 Tamanho: {tamanho_texto} palavras")
+                print(f"   📐 Resolução: {resolucao}")
             else:  # long
-                resolucao = config.get('RESOLUCAO_LONG', '1280x720') 
-                print(f"🎯 Gerando roteiro para LONG (resolução: {resolucao})")
+                tamanho_texto = config.get('TAMANHO_MAX_LONG', 130)
+                resolucao = config.get('RESOLUCAO_LONG', '1280x720')
+                print(f"🎯 Gerando roteiro para LONG") 
+                print(f"   📏 Tamanho: {tamanho_texto} palavras")
+                print(f"   📐 Resolução: {resolucao}")
 
-            # Carrega e personaliza prompt do agente
-            prompt = self.carregar_agente(config, linha_tema, schema_canal)
+            # Carrega e personaliza prompt do agente - ✅ NOVO: passa tipo_video
+            prompt = self.carregar_agente(config, linha_tema, schema_canal, tipo_video)
 
             # Cria provider
             provider_name = provider or config.get('TEXT_PROVIDER', 'gemini_text')
@@ -156,162 +357,19 @@ class TextGenerator:
             traceback.print_exc()
             raise
 
-    def _construir_json_schema_gemini(self, schema_canal: Dict[str, Any]) -> Dict[str, Any]:
-        """Constrói JSON Schema para Gemini baseado no schema do canal"""
-        try:
-            # Pega o exemplo do schema (pode ser dict ou string)
-            exemplo = schema_canal.get('exemplo_resposta', {})
-            
-            # Se exemplo_resposta é string, tenta converter para dict
-            if isinstance(exemplo, str):
-                try:
-                    # Remove escapes desnecessários
-                    exemplo_limpo = exemplo.replace('\\"', '"').replace('\\n', '\n')
-                    exemplo = json.loads(exemplo_limpo)
-                except json.JSONDecodeError:
-                    print("⚠️ Não foi possível converter exemplo_resposta para dict, usando fallback")
-                    exemplo = {}
-            
-            properties = {}
-            campos_obrigatorios = schema_canal.get('campos_obrigatorios', [])
-            
-            for campo in campos_obrigatorios:
-                valor_exemplo = exemplo.get(campo)
-                
-                # Determina o tipo baseado no exemplo ou no nome do campo
-                if campo == 'tags' or isinstance(valor_exemplo, list):
-                    properties[campo] = {
-                        "type": "array", 
-                        "items": {"type": "string"}
-                    }
-                elif campo == 'texto' or campo == 'descricao' or campo == 'titulo' or campo == 'hook' or campo == 'hook_pt' or campo == 'thumb':
-                    properties[campo] = {"type": "string"}
-                elif isinstance(valor_exemplo, bool):
-                    properties[campo] = {"type": "boolean"}
-                elif isinstance(valor_exemplo, (int, float)):
-                    properties[campo] = {"type": "number"}
-                else:
-                    # Default para string
-                    properties[campo] = {"type": "string"}
-            
-            # ✅ CORREÇÃO: Remove additionalProperties que não é suportado pelo Gemini
-            json_schema = {
-                "type": "object",
-                "properties": properties,
-                "required": campos_obrigatorios
-                # ❌ REMOVIDO: "additionalProperties": False
-            }
-            
-            print(f"🎯 JSON Schema gerado para {len(properties)} campos: {list(properties.keys())}")
-            return json_schema
-            
-        except Exception as e:
-            print(f"❌ Erro ao construir JSON Schema: {e}")
-            # Fallback: schema básico sem additionalProperties
-            return {
-                "type": "object",
-                "properties": {
-                    "texto": {"type": "string"},
-                    "titulo": {"type": "string"},
-                    "descricao": {"type": "string"}
-                },
-                "required": ["texto", "titulo", "descricao"]
-            }
-
-    def carregar_agente(self, config: Dict[str, Any], linha_tema: str = None, schema: Dict[str, Any] = None) -> str:
-        """Carrega e personaliza o template do agente"""
-        try:
-            pasta_canal = config['PASTA_CANAL']
-            agente_file = pasta_canal / config.get('AGENTE_FILE', 'agente.txt')
-            
-            if not agente_file.exists():
-                raise FileNotFoundError(f"Arquivo do agente não encontrado: {agente_file}")
-            
-            template = agente_file.read_text(encoding='utf-8')
-            
-            # Se não foi passado um tema, pega um aleatório do arquivo de temas
-            if not linha_tema:
-                temas_file = pasta_canal / config.get('TEMAS_FILE', 'temas.txt')
-                if temas_file.exists():
-                    temas = temas_file.read_text(encoding='utf-8').strip().split('\n')
-                    temas = [tema.strip() for tema in temas if tema.strip()]
-                    if temas:
-                        linha_tema = random.choice(temas)
-                        print(f"🎲 Tema aleatório selecionado: {linha_tema}")
-                    else:
-                        raise ValueError("Arquivo de temas está vazio")
-                else:
-                    raise FileNotFoundError(f"Arquivo de temas não encontrado: {temas_file}")
-            
-            # Processa a linha do tema (formato: "autor, assunto")
-            partes = [parte.strip() for parte in linha_tema.split(',', 1)]
-            
-            if len(partes) == 2:
-                tema, autor = partes
-            else:
-                # Se não tem vírgula, usa tudo como tema e autor desconhecido
-                tema = partes[0]
-                autor = "Reflexão Filosófica"
-
-            # ✅ CARREGA SCHEMA PARA PEGAR CAMPOS E EXEMPLO
-            schema_file = pasta_canal / config.get('SCHEMA_FILE', 'schema.json')
-            with open(schema_file, 'r', encoding='utf-8') as f:
-                schema_data = json.load(f)
-            
-            # ✅ PREPARA TODAS AS SUBSTITUIÇÕES
-            substituicoes = {
-                '{tema}': tema,
-                '{autor}': autor,
-                '{TAMANHO_MAX}': str(config.get('TAMANHO_MAX', 135)),
-                '{DURACAO_MINUTOS}': str(config.get('DURACAO_MINUTOS', 1)),
-                '{campos_obrigatorios}': str(schema_data.get('campos_obrigatorios', [])),
-                '{exemplo_resposta}': schema_data.get('exemplo_resposta', '')
-            }
-            
-            # ✅ SUBSTITUI TODOS OS PLACEHOLDERS NO TEMPLATE
-            for placeholder, valor in substituicoes.items():
-                if not isinstance(valor, str):
-                    valor = json.dumps(valor, ensure_ascii=False, indent=2)
-                template = template.replace(placeholder, valor)
-
-            
-            print(f"🎯 Tema: {tema}")
-            print(f"👤 Autor: {autor if autor else '(não especificado)'}")
-            
-            return template
-            
-        except Exception as e:
-            print(f"❌ Erro ao carregar agente: {e}")
-            raise
-
-    def carregar_schema(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        """Carrega o schema de validação do canal"""
-        try:
-            pasta_canal = config['PASTA_CANAL']
-            schema_file = pasta_canal / config.get('SCHEMA_FILE', 'schema.json')
-            
-            if not schema_file.exists():
-                raise FileNotFoundError(f"Arquivo schema não encontrado: {schema_file}")
-            
-            with open(schema_file, 'r', encoding='utf-8') as f:
-                schema = json.load(f)
-            
-            print(f"📋 Schema carregado: {len(schema.get('campos_obrigatorios', []))} campos obrigatórios")
-            return schema
-            
-        except Exception as e:
-            print(f"❌ Erro ao carregar schema: {e}")
-            raise
-
-
     def _salvar_no_banco(self, dados: dict, config: dict, tipo_video: str = 'short') -> dict:
         """Salva roteiro no banco de dados usando a nova abordagem com objetos"""
         try:
             # Busca ou cria o canal
             canal = self.canal_manager.buscar_por_nome(config.get('NOME'))
             if not canal:
-                canal = Canal(nome=config.get('NOME'), config_path=str(config.get('PASTA_CANAL', '')))
-                canal = self.canal_manager.criar(canal)
+                # ✅ CORREÇÃO: Extrair valores do config, não passar objetos completos
+                canal = Canal(
+                    nome=config.get('NOME'),  # String
+                    config_path=str(config.get('PASTA_CANAL', '')),  # String
+                    link=config.get('LINK')  # String ou None
+                )
+                canal = self.canal_manager.criar(canal, config)
             
             # ✅ NOVO: Determina resolução baseada no tipo de vídeo
             if tipo_video == 'short':
@@ -338,25 +396,6 @@ class TextGenerator:
                 
         except Exception as e:
             return {'sucesso': False, 'erro': str(e)}
-    
-    def validar_json_contra_schema(self, dados: Dict[str, Any], schema: Dict[str, Any]) -> bool:
-        """Valida se o JSON gerado pela IA segue o schema do canal"""
-        campos_obrigatorios = schema.get('campos_obrigatorios', [])
-        
-        if not campos_obrigatorios:
-            print("⚠️ Schema sem campos obrigatórios definidos")
-            return True
-        
-        campos_faltantes = [campo for campo in campos_obrigatorios if campo not in dados]
-        
-        if campos_faltantes:
-            print(f"❌ Campos obrigatórios faltando: {campos_faltantes}")
-            print(f"📋 Campos esperados: {campos_obrigatorios}")
-            print(f"📦 Campos recebidos: {list(dados.keys())}")
-            return False
-        
-        print("✅ JSON validado contra schema com sucesso")
-        return True
 
     def salvar_roteiro_completo(self, dados: Dict, config: Dict, tipo_video: str = 'short') -> Dict:
         """
@@ -410,7 +449,6 @@ def main():
     parser.add_argument('tipo_video', choices=['short', 'long'], default='short', 
                        help='Tipo de vídeo a ser gerado (short ou long)')
     parser.add_argument('--provider', help='Provedor de IA (gemini, grok, claude)')
-    
     
     args = parser.parse_args()
     

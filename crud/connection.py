@@ -1,3 +1,4 @@
+# connection.py
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -8,67 +9,70 @@ import os
 from sqlmodel import create_engine, SQLModel, Session, text
 from dotenv import load_dotenv
 
-# Carrega variáveis do .env
 load_dotenv()
 
 def get_database_url():
-    """
-    Retorna a URL de conexão com o banco de dados
-    Prioridade:
-    1. DATABASE_URL do ambiente
-    2. Variáveis individuais do .env
-    3. SQLite local (fallback)
-    """
-    # Se DATABASE_URL estiver definida, usa ela
     database_url = os.getenv("DATABASE_URL")
     if database_url:
-        # Garante que é PostgreSQL
         if database_url.startswith("postgres://"):
             database_url = database_url.replace("postgres://", "postgresql://", 1)
         return database_url
-    
-    # Constrói a URL a partir de variáveis individuais
-    user = os.getenv("user")
-    password = os.getenv("password")
-    host = os.getenv("host")
-    port = os.getenv("port")
-    dbname = os.getenv("dbname")
-    
+
+    # mantém o fallback por variáveis soltas (melhor usar MAIÚSCULAS no .env)
+    user = os.getenv("user") or os.getenv("USER")
+    password = os.getenv("password") or os.getenv("PASSWORD")
+    host = os.getenv("host") or os.getenv("HOST")
+    port = os.getenv("port") or os.getenv("PORT")
+    dbname = os.getenv("dbname") or os.getenv("DBNAME")
+
     if all([user, password, host, port, dbname]):
         return f"postgresql://{user}:{password}@{host}:{port}/{dbname}"
-    
-    # Fallback para SQLite local
+
     print("⚠️  Usando SQLite local (postgresql não configurado)")
     return "sqlite:///creator_video.db"
 
-# Cria a engine de conexão
-engine = create_engine(
-    get_database_url(),
-    echo=False,  # Mude para False para silenciar as queries SQL
+# ===== Engine robusta contra conexões “stale” =====
+_DB_URL = get_database_url()
+_IS_PG = _DB_URL.startswith("postgresql")
+
+_engine_kwargs = dict(
+    echo=False,
     pool_size=10,
-    max_overflow=20
+    max_overflow=20,
+    pool_pre_ping=True,    # <- testa a conexão antes de emprestar do pool
 )
 
+if _IS_PG:
+    _engine_kwargs.update(
+        pool_recycle=1800,  # <- recicla conexões antigas (em segundos)
+        connect_args={
+            "connect_timeout": 5,
+            # TCP keepalives (psycopg2/libpq)
+            "keepalives": 1,
+            "keepalives_idle": 30,
+            "keepalives_interval": 10,
+            "keepalives_count": 5,
+        },
+    )
+
+engine = create_engine(_DB_URL, **_engine_kwargs)
+
 def test_connection():
-    """Testa a conexão com o banco de dados"""
     try:
         with Session(engine) as session:
-            # Testa com uma query simples - usando text() para queries SQL puras
-            if "postgresql" in get_database_url():
-                result = session.exec(text("SELECT 1"))
-                result.first()  # Executa a query
-                print("✅ Conexão PostgreSQL bem-sucedida!")
-            else:
-                result = session.exec(text("SELECT 1"))
-                result.first()
-                print("✅ SQLite local conectado!")
+            session.exec(text("SELECT 1")).first()
+        print("✅ Conexão OK:", "PostgreSQL" if _IS_PG else "SQLite")
         return True
     except Exception as e:
         print(f"❌ Erro na conexão com o banco: {e}")
+        # recicla o pool para evitar conexões zumbis em próximas tentativas
+        try:
+            engine.dispose()
+        except Exception:
+            pass
         return False
 
 def criar_tabelas():
-    """Cria todas as tabelas definidas nos models"""
     try:
         SQLModel.metadata.create_all(engine)
         print("✅ Tabelas criadas/verificadas com sucesso!")
@@ -78,11 +82,10 @@ def criar_tabelas():
         return False
 
 def get_session():
-    """Retorna uma sessão do banco de dados"""
+    # sessão curtinha; abra/feche no ponto de uso
     return Session(engine)
 
 def recriar_tabelas():
-    """Recria todas as tabelas (CUIDADO: perde dados existentes!)"""
     try:
         SQLModel.metadata.drop_all(engine)
         SQLModel.metadata.create_all(engine)

@@ -211,3 +211,179 @@ def clean_json_response(text: str) -> Dict[str, Any]:
         pass
 
     raise ValueError(f"Não foi possível extrair JSON válido da resposta: {text[:200]}...")
+    
+def ajustar_timestamps_srt(arquivo_entrada: str, arquivo_saida: str = None) -> str:
+    """
+    Ajusta os timestamps de um arquivo SRT removendo gaps entre legendas
+    
+    Args:
+        arquivo_entrada: Caminho para o arquivo SRT original
+        arquivo_saida: Caminho para o arquivo SRT ajustado (opcional)
+    
+    Returns:
+        str: Caminho do arquivo ajustado
+    """
+    def time_to_ms(time_str):
+        hours, minutes, seconds = time_str.split(':')
+        seconds, ms = seconds.split(',')
+        return (int(hours) * 3600 + int(minutes) * 60 + int(seconds)) * 1000 + int(ms)
+
+    def ms_to_time(ms):
+        hours = ms // 3600000
+        ms %= 3600000
+        minutes = ms // 60000
+        ms %= 60000
+        seconds = ms // 1000
+        ms %= 1000
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d},{ms:03d}"
+
+    def parse_srt(content):
+        blocks = content.strip().split('\n\n')
+        subtitles = []
+        
+        for block in blocks:
+            lines = block.split('\n')
+            if len(lines) >= 3:
+                try:
+                    index = int(lines[0])
+                    time_match = re.match(r'(\d+:\d+:\d+,\d+) --> (\d+:\d+:\d+,\d+)', lines[1])
+                    if time_match:
+                        start = time_match.group(1)
+                        end = time_match.group(2)
+                        text = '\n'.join(lines[2:])
+                        subtitles.append({
+                            'index': index,
+                            'start': start,
+                            'end': end,
+                            'text': text
+                        })
+                except ValueError:
+                    continue
+        return subtitles
+
+    def save_srt(subtitles, output_path):
+        with open(output_path, 'w', encoding='utf-8') as file:
+            for sub in subtitles:
+                file.write(f"{sub['index']}\n")
+                file.write(f"{sub['start']} --> {sub['end']}\n")
+                file.write(f"{sub['text']}\n\n")
+
+    # Processamento principal
+    if arquivo_saida is None:
+        arquivo_saida = arquivo_entrada.replace('.srt', '_ajustado.srt')
+    
+    # Ler arquivo original
+    with open(arquivo_entrada, 'r', encoding='utf-8') as f:
+        conteudo = f.read()
+    
+    subtitles = parse_srt(conteudo)
+    
+    if not subtitles:
+        raise ValueError("Nenhuma legenda válida encontrada no arquivo")
+    
+    # Ajustar timestamps
+    total_correction = 0
+    previous_end = None
+    
+    for i, subtitle in enumerate(subtitles):
+        start_ms = time_to_ms(subtitle['start'])
+        end_ms = time_to_ms(subtitle['end'])
+        
+        if previous_end is not None:
+            gap = start_ms - previous_end
+            if gap > 0:
+                total_correction += gap
+                print(f"Ajustando gap de {gap}ms entre as legendas {i} e {i+1}")
+        
+        start_ms -= total_correction
+        end_ms -= total_correction
+        
+        subtitle['start'] = ms_to_time(start_ms)
+        subtitle['end'] = ms_to_time(end_ms)
+        previous_end = end_ms + total_correction  # Usar o valor original para cálculo do próximo gap
+    
+    # Salvar arquivo ajustado
+    save_srt(subtitles, arquivo_saida)
+    
+    tempo_total_original = time_to_ms(subtitles[-1]['end']) + total_correction
+    tempo_total_ajustado = time_to_ms(subtitles[-1]['end'])
+    
+    print(f"\nArquivo ajustado salvo como: {arquivo_saida}")
+    print(f"Tempo total corrigido: {total_correction/1000:.2f} segundos")
+    print(f"Tempo original: {tempo_total_original/1000:.2f}s → Tempo ajustado: {tempo_total_ajustado/1000:.2f}s")
+    
+    return arquivo_saida
+
+def analisar_gaps_srt(arquivo_srt: str) -> Dict[str, Any]:
+    """
+    Analisa os gaps entre legendas SRT sem modificar o arquivo
+    
+    Args:
+        arquivo_srt: Caminho para o arquivo SRT
+    
+    Returns:
+        Dict com informações sobre os gaps
+    """
+    def time_to_ms(time_str):
+        hours, minutes, seconds = time_str.split(':')
+        seconds, ms = seconds.split(',')
+        return (int(hours) * 3600 + int(minutes) * 60 + int(seconds)) * 1000 + int(ms)
+
+    def parse_srt(content):
+        blocks = content.strip().split('\n\n')
+        subtitles = []
+        
+        for block in blocks:
+            lines = block.split('\n')
+            if len(lines) >= 3:
+                try:
+                    index = int(lines[0])
+                    time_match = re.match(r'(\d+:\d+:\d+,\d+) --> (\d+:\d+:\d+,\d+)', lines[1])
+                    if time_match:
+                        start = time_match.group(1)
+                        end = time_match.group(2)
+                        text = '\n'.join(lines[2:])
+                        subtitles.append({
+                            'index': index,
+                            'start': start,
+                            'end': end,
+                            'text': text,
+                            'start_ms': time_to_ms(start),
+                            'end_ms': time_to_ms(end)
+                        })
+                except ValueError:
+                    continue
+        return subtitles
+
+    # Ler e analisar arquivo
+    with open(arquivo_srt, 'r', encoding='utf-8') as f:
+        conteudo = f.read()
+    
+    subtitles = parse_srt(conteudo)
+    gaps = []
+    total_gap = 0
+    
+    for i in range(len(subtitles) - 1):
+        current_end = subtitles[i]['end_ms']
+        next_start = subtitles[i + 1]['start_ms']
+        gap = next_start - current_end
+        
+        if gap > 0:
+            gaps.append({
+                'entre_legendas': f"{i+1} → {i+2}",
+                'gap_ms': gap,
+                'gap_segundos': gap / 1000,
+                'legenda_anterior': subtitles[i]['text'][:50] + "...",
+                'proxima_legenda': subtitles[i + 1]['text'][:50] + "..."
+            })
+            total_gap += gap
+    
+    return {
+        'total_legendas': len(subtitles),
+        'total_gaps': len(gaps),
+        'tempo_total_gaps_ms': total_gap,
+        'tempo_total_gaps_segundos': total_gap / 1000,
+        'gaps_detectados': gaps,
+        'duracao_total_original_ms': subtitles[-1]['end_ms'] if subtitles else 0,
+        'duracao_total_ajustada_ms': (subtitles[-1]['end_ms'] - total_gap) if subtitles else 0
+    }

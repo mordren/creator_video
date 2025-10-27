@@ -5,7 +5,7 @@ import argparse
 import subprocess
 from pathlib import Path
 
-from video_maker.video_utils import mixar_audio_voz_trilha
+from video_maker.video_utils import mixar_audio_com_musica
 
 sys.path.append(str(Path(__file__).parent))
 
@@ -14,6 +14,7 @@ try:
     from providers import create_tts_provider
     from crud.roteiro_manager import RoteiroManager
     from crud.video_manager import VideoManager
+    from crud.canal_manager import CanalManager
 except ImportError as e:
     print(f"❌ Erro de importação: {e}")
     sys.exit(1)
@@ -22,6 +23,7 @@ class AudioSystem:
     def __init__(self):
         self.roteiro_manager = RoteiroManager()
         self.video_manager = VideoManager()
+        self.canal_manager = CanalManager()
 
     def _get_audio_duration(self, audio_path: str) -> int:
         """Obtém a duração do áudio em segundos"""
@@ -35,17 +37,29 @@ class AudioSystem:
             print(f"⚠️ Erro ao obter duração do áudio: {e}")
             return 0
 
-    def generate_audio(self, video_id: str, channel: str, provider: str = None) -> bool:
-        """Gera áudio para um roteiro pelo video_id"""
-        print(f"🎵 Gerando áudio para: {channel}/{video_id}")
+    def generate_audio(self, roteiro_id: int, provider: str = None) -> bool:
+        """Gera áudio para um roteiro pelo ID do banco"""
+        print(f"🎵 Gerando áudio para roteiro ID: {roteiro_id}")
         
-        config = carregar_config_canal(channel)
+        # Busca roteiro no banco
+        roteiro = self.roteiro_manager.buscar_por_id(roteiro_id)
+        if not roteiro:
+            print(f"❌ Roteiro com ID {roteiro_id} não encontrado")
+            return False
+        
+        # Busca canal para obter configuração
+        canal = self.canal_manager.buscar_por_id(roteiro.canal_id)
+        if not canal:
+            print(f"❌ Canal com ID {roteiro.canal_id} não encontrado")
+            return False
+        
+        config = carregar_config_canal(canal.config_path)
         provider = provider or config.get('TTS_PROVIDER', 'edge')
         
-        # Busca roteiro
+        # ✅ CORREÇÃO: Usa id_video do roteiro para construir o caminho
         pasta_base = Path(config['PASTA_BASE'])
-        pasta_video = pasta_base / video_id
-        arquivo_json = pasta_video / f"{video_id}.json"
+        pasta_video = pasta_base / roteiro.id_video  # ← id_video é o nome da pasta
+        arquivo_json = pasta_video / f"{roteiro.id_video}.json"
         
         if not arquivo_json.exists():
             print(f"❌ Arquivo não encontrado: {arquivo_json}")
@@ -63,23 +77,31 @@ class AudioSystem:
             return False
         
         # Gera áudio
-        audio_file = pasta_video / f"{video_id}.mp3"
+        audio_file = pasta_video / f"{roteiro.id_video}.mp3"
         print(f"📝 {len(text)} chars | 🔊 {provider} | 📺 {data.get('titulo', 'Sem título')}")
+        print(f"📁 Pasta: {pasta_video}")
                 
         tts = create_tts_provider(provider)
         success = tts.sintetizar(text, audio_file, config)
         
-        mixado = mixar_audio_voz_trilha(audio_file, config.get('MUSICA'))
+        # Mixar com música de fundo, se disponível
+        mixado = audio_file
+        musica_path = config.get('MUSICA')
+        if musica_path and Path(musica_path).exists():
+            print("🎵 Mixando áudio com música...")
+            mixado = mixar_audio_com_musica(audio_file, musica_path)
+        else:
+            print("ℹ️  Nenhuma música configurada ou arquivo não encontrado")
 
-        if mixado.exists() and success and audio_file.exists():
-            self._update_apos_audio_sucesso(data, str(audio_file), str(mixado), provider, channel, config, arquivo_json)
+        if success and audio_file.exists():
+            self._update_apos_audio_sucesso(roteiro, data, str(audio_file), str(mixado), provider, config, arquivo_json)
             print(f"✅ Áudio gerado: {audio_file}")
             return True
         
         print("❌ Falha na geração")
         return False
 
-    def _update_apos_audio_sucesso(self, data: dict, audio_file: str, mixado: str, provider: str, channel: str, config: dict, arquivo_json: Path):
+    def _update_apos_audio_sucesso(self, roteiro, data: dict, audio_file: str, mixado: str, provider: str, config: dict, arquivo_json: Path):
         """Atualiza APENAS se o áudio foi gerado com sucesso"""
         
         # Obtém a voz TTS baseada no provider
@@ -113,51 +135,43 @@ class AudioSystem:
         
         print("📁 Arquivo JSON atualizado")
         
-        # ✅ ABORDAGEM COM MANAGERS ESPECÍFICOS
+        # ✅ ATUALIZAÇÃO DO BANCO
         try:
-            # Busca roteiro existente
-            roteiro = self.roteiro_manager.buscar_por_id_video(data['id_roteiro'])
+            print(f"🔄 Atualizando roteiro: {roteiro.id}")
             
-            if roteiro:
-                print(f"🔄 Atualizando roteiro: {roteiro.id}")
-                
-                # Marca áudio como gerado no roteiro
-                self.roteiro_manager.marcar_audio_gerado(roteiro.id)
-                
-                # Obtém duração do áudio mixado
-                duracao = self._get_audio_duration(mixado)
-                
-                # Salva informações do áudio usando o VideoManager
-                success = self.video_manager.salvar_info_audio(
-                    roteiro_id=roteiro.id,
-                    arquivo_audio=audio_file,
-                    tts_provider=provider,
-                    voz_tts=voz_tts,
-                    arquivo_legenda=arquivo_legenda,
-                    audio_mixado=mixado,
-                    duracao=duracao
-                )
-                
-                if success:
-                    print("💾 Banco atualizado com sucesso usando managers específicos!")
-                else:
-                    print("❌ Falha ao salvar informações de áudio no banco")
-                    
+            # Marca áudio como gerado no roteiro
+            self.roteiro_manager.marcar_audio_gerado(roteiro.id)
+            
+            # Obtém duração do áudio mixado
+            duracao = self._get_audio_duration(mixado)
+            
+            # Salva informações do áudio usando o VideoManager
+            success = self.video_manager.salvar_info_audio(
+                roteiro_id=roteiro.id,
+                arquivo_audio=audio_file,
+                tts_provider=provider,
+                voz_tts=voz_tts,
+                arquivo_legenda=arquivo_legenda,
+                audio_mixado=mixado if mixado != audio_file else None,
+                duracao=duracao
+            )
+            
+            if success:
+                print("💾 Banco atualizado com sucesso!")
             else:
-                print("⚠️ Roteiro não encontrado no banco - não foi criado pelo texto.py?")
+                print("❌ Falha ao salvar informações de áudio no banco")
                     
         except Exception as e:
             print(f"⚠️ Erro ao atualizar banco: {e}")
 
 def main():
     parser = argparse.ArgumentParser(description='Gerar áudio para roteiros')
-    parser.add_argument('canal', help='Nome do canal')
-    parser.add_argument('video_id', help='ID do vídeo')
+    parser.add_argument('roteiro_id', type=int, help='ID do roteiro no banco')
     parser.add_argument('--provider', help='Provedor TTS (edge, gemini)')
     
     args = parser.parse_args()
     
-    success = AudioSystem().generate_audio(args.video_id, args.canal, args.provider)
+    success = AudioSystem().generate_audio(args.roteiro_id, args.provider)
     sys.exit(0 if success else 1)
 
 if __name__ == "__main__":

@@ -24,7 +24,14 @@ RESOLUCAO_LONG = "1280x720"   # Horizontal para vídeos longos
 
 # -------------------------- Parâmetros Comuns --------------------------------------
 IDIOMA = "pt"
-TAMANHO_MAX = 135
+# ✅ NOVO: Tamanhos separados para short e long
+TAMANHO_MAX_SHORT = 130
+TAMANHO_MAX_LONG = 3000
+
+# ✅ NOVO: Durações separadas para short e long
+DURACAO_MIN_SHORT = 1
+DURACAO_MIN_LONG = 25
+
 MODEL_NAME = "gemini-2.5-flash"
 TEMPERATURE = 0.8
 TOP_P = 0.9
@@ -42,6 +49,7 @@ EDGE_TTS_VOICE = "pt-BR-AntonioNeural"
 EDGE_TTS_RATE = "+15%"
 EDGE_TTS_PITCH = "-2Hz"
 EDGE_TTS_LEGENDAS = True
+EDGE_TTS_AJUSTAR_TIMESTAMPS: True  
 
 # Gemini TTS (premium)
 GEMINI_TTS_VOICE = "Algenib"  # ou outra voz disponível

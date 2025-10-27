@@ -14,7 +14,7 @@ class Canal(SQLModel, table=True):
     config_path: str
     link: Optional[str] = Field(default=None, sa_type=Text)
     ativo: bool = True
-    data_criacao: datetime = Field(default_factory=datetime.now)
+    data_criacao: datetime = Field(default_factory=datetime.now)    
     
     roteiros: List["Roteiro"] = Relationship(back_populates="canal_obj")
 

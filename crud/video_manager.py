@@ -91,31 +91,49 @@ class VideoManager:
                 return False
     
     # --- Operações Específicas de Vídeo ---
-    def salvar_info_video(self, 
-                         roteiro_id: int, 
-                         arquivo_video: str,
-                         duracao: int = None) -> bool:
-        """Salva informações do vídeo renderizado"""
+    def salvar_info_video(
+        self,
+        roteiro_id: int,
+        arquivo_video: str,
+        duracao: int | None = None,
+        titulo: str | None = None,
+        thumb: str | None = None,
+    ) -> bool:
+        """Salva informações do vídeo renderizado (inclui titulo e thumb)."""
         with Session(self.engine) as session:
             try:
                 video = self.buscar_por_roteiro_id(roteiro_id)
+                # fallback: puxa do Roteiro se não foi passado
+                if titulo is None or thumb is None:
+                    r = session.get(Roteiro, roteiro_id)
+                    if r:
+                        if titulo is None:
+                            titulo = r.titulo
+                        if thumb is None:
+                            thumb = r.thumb
+
                 if video:
                     video.arquivo_video = arquivo_video
-                    if duracao:
+                    if duracao is not None:
                         video.duracao = duracao
+                    if titulo is not None:
+                        video.titulo = titulo
+                    if thumb is not None:
+                        video.thumb = thumb
                     session.commit()
                     return True
                 else:
-                    # Cria novo vídeo se não existir
                     video = Video(
                         roteiro_id=roteiro_id,
                         arquivo_video=arquivo_video,
-                        duracao=duracao
+                        duracao=duracao,
+                        titulo=titulo,
+                        thumb=thumb,
                     )
                     session.add(video)
                     session.commit()
                     return True
-                    
+
             except Exception as e:
                 session.rollback()
                 print(f"❌ Erro ao salvar info vídeo: {e}")

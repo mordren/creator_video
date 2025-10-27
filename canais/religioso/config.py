@@ -6,16 +6,23 @@ from pathlib import Path
 
 # -------------------------- Pastas -------------------------------------------------
 PASTA_BASE = Path(r"E:\Canal Religioso\roteiros")
-PASTA_CANAL = Path(r"C:\Users\mordren\Documents\creator\canais\filosofia")
+PASTA_CANAL = Path(r"C:\Users\mordren\Documents\creator\canais\Religioso")
 PASTA_VIDEOS = Path(r"E:\Canal Religioso\Vídeos")
+VIDEOS_DIR = Path(r"C:\Users\mordren\Documents\creator\canais\Religioso\assets\videos")
 NOME = "Hope in Every Verse"
 LINK = "@hope_in_every_verse"
+NICKNAME = "religioso"
 
 RESOLUCAO_LONG = "1280x720"   # Horizontal para vídeos longos
 # -------------------------- Parâmetros Comuns --------------------------------------
 IDIOMA = "en"
-TAMANHO_MAX = 3000
-DURACAO_MIN = 25
+# ✅ NOVO: Tamanhos separados para short e long
+
+TAMANHO_MAX_LONG = 3000
+# ✅ NOVO: Durações separadas para short e long
+DURACAO_MIN_LONG = 25
+TEMPLATE_LONG = 'long_religioso'  # Para vídeos longos
+
 
 
 # -------------------------- Agente -------------------------------------------------
@@ -28,6 +35,7 @@ EDGE_TTS_VOICE = "en-US-AndrewNeural"
 EDGE_TTS_RATE = "-6%"
 EDGE_TTS_PITCH = "+0Hz"
 EDGE_TTS_LEGENDAS = True
+EDGE_TTS_AJUSTAR_TIMESTAMPS: True  
 
 # Gemini TTS (premium)
 GEMINI_TTS_VOICE = "Algenib"  # ou outra voz disponível
@@ -44,4 +52,4 @@ RESOLUCAO = "1280x720"
 FPS = 60
 FONTE = "Montserrat-Black"
 TAMANHO_FONTE = 90
-MUSICA = Path(r"C:\Users\mordren\Documents\creator\canais\filosofia\assets\music\filosofia.mp3")
+MUSICA = Path(r"C:\Users\mordren\Documents\creator\canais\Hope in Every Verse\assets\music\musica.mp3")

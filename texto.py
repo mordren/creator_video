@@ -288,7 +288,7 @@ class TextGenerator:
             faixa = [int(tamanho_texto * (1 - 0.10)), int(tamanho_texto * (1 + 0.10))]
             attempts = 0
             
-            while not faixa[0] <= count_words(dados_json.get('texto', '')) <= faixa[1] and attempts < 4:
+            while not faixa[0] <= count_words(dados_json.get('texto', '')) <= faixa[1] and attempts < 6:
                 print('tamanho:' + str(count_words(dados_json.get('texto'))))
                 print('Refazendo')
                 atual = count_words(dados_json.get('texto', ''))

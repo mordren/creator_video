@@ -7,6 +7,7 @@ from pathlib import Path
 PASTA_BASE = Path(r"E:\Canal Terror")
 PASTA_CANAL = Path(r"C:\Users\mordren\Documents\creator\canais\terror")
 PASTA_VIDEOS = Path(r"E:\Canal Terror\Vídeos")
+MUSICA = Path(r"C:\Users\mordren\Documents\creator\canais\terror\assets\musica\musica.mp3")
 NOME = "Garras no Telhado"
 LINK = "@garras_no_telhado"
 # -------------------------- Parâmetros Comuns --------------------------------------
@@ -44,7 +45,6 @@ RESOLUCAO = "720x1280"  # Vertical para shorts
 FPS = 60
 FONTE = "Montserrat-Black"
 TAMANHO_FONTE = 90
-MUSICA = Path(r"C:\Users\mordren\Documents\creator\canais\terror\assets\music\terror.mp3")
 
 # -------------------------- Imagens ------------------------------------------------
 IMAGES_DIR_SHORT = PASTA_BASE / "imagens_short"

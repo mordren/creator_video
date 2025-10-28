@@ -51,7 +51,7 @@ class VideoGenerator:
                 tipo_video = self._determinar_tipo_video(roteiro.resolucao)
                 print(f"🎯 Resolução do roteiro: '{roteiro.resolucao}' -> {tipo_video}")
             
-            template_name = config.get('TEMPLATE_LONG')
+            template_name = config.get(tipo_video)
             print(f"📝 Template selecionado: {template_name}")
             
             # ✅ BUSCA INFORMAÇÕES DO VÍDEO PELO ROTEIRO_ID
@@ -83,13 +83,15 @@ class VideoGenerator:
                 roteiro,
                 tipo_video  # ✅ Passa o tipo_video determinado
             )
+
+            print('RESULTADO É ESSE:' + str(resultado))
             
             if resultado and resultado.exists():
                 # Atualiza banco com sucesso
                 success = self._atualizar_video_sucesso(
                     roteiro.id, 
                     str(resultado),
-                    info_video.duracao or 0
+                    info_video.duracao or 0,                    
                 )
                 
                 if success:
@@ -117,7 +119,7 @@ class VideoGenerator:
             "x1280" in resolucao_lower or  # captura 720x1280, 1080x1280, etc
             "x1920" in resolucao_lower or  # captura 1080x1920, etc
             "9:16" in resolucao_lower):
-            return "SHORT"
+            return "TEMPLATE_SHORT"
         
         # Verifica por padrões de horizontal/long
         elif (resolucao_lower == "horizontal" or 
@@ -126,7 +128,7 @@ class VideoGenerator:
               "x720" in resolucao_lower or   # captura 1280x720, 1920x720, etc
               "x1080" in resolucao_lower or  # captura 1920x1080, etc
               "16:9" in resolucao_lower):
-            return "LONG"
+            return "TEMPLATE_LONG"
         else:
             # Default para SHORT se não reconhecer
             print(f"⚠️ Resolução '{resolucao}' não reconhecida, usando SHORT como padrão")
@@ -155,7 +157,6 @@ class VideoGenerator:
             else:  # LONG
                 images_dir = config.get('IMAGES_DIR_LONG', './imagens_long')
             
-
             # Executa o render
             print(f"🎨 Executando template {template_name}...")
             print(f"📁 Usando diretório de imagens: {images_dir}")
@@ -163,7 +164,7 @@ class VideoGenerator:
             print(f"🎯 Tipo de vídeo: {tipo_video}")
             print(f"📐 Resolução: {roteiro.resolucao}")
             
-            resultado = render_func(audio_path, config)
+            resultado = render_func(audio_path, config, roteiro)
             
             return Path(resultado) if resultado else None
             
@@ -182,7 +183,7 @@ class VideoGenerator:
                 arquivo_video=arquivo_video,
                 duracao=duracao,
                 titulo=roteiro.titulo if roteiro else None,
-                thumb=roteiro.thumb if roteiro else None,
+                thumb=roteiro.thumb if roteiro else None,                
             )
             print("💾 Banco atualizado com informações do vídeo" if success else "⚠️ Falha ao atualizar informações do vídeo")
             return success

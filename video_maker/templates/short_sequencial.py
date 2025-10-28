@@ -1,220 +1,244 @@
 #!/usr/bin/env python3
 # short_sequencial.py - Template para vídeos shorts sequenciais de terror
-import random
 import shutil
 import subprocess
 from pathlib import Path
 
-from video_maker.subtitle_tools import srt_to_ass_karaoke
 from video_maker.video_engine import aplicar_efeito
+from video_maker.subtitle_tools import srt_to_ass_karaoke
 from video_maker.video_utils import (
-    get_media_duration, listar_imagens, quebrar_texto,
-    criar_frame_estatico, normalizar_duracao, gerar_capa_pillow,
+    get_media_duration, listar_imagens, 
+    criar_frame_estatico, gerar_capa_pillow,
     preparar_diretorios_trabalho, limpar_diretorio_temp
 )
 
-def mixar_audio_com_musica(audio_voz, musica_path, ganho_musica=-15):
-    """Mixa áudio de voz com música de fundo"""
-    audio_path = Path(audio_voz)
-    musica = Path(musica_path)
-    
-    if not audio_path.exists():
-        raise FileNotFoundError(f"Áudio não encontrado: {audio_path}")
-    if not musica.exists():
-        raise FileNotFoundError(f"Música não encontrada: {musica}")
-
-    saida = audio_path.with_name(f"{audio_path.stem}_com_musica.mp3")
-    
-    cmd = [
-        "ffmpeg", "-y",
-        "-i", str(audio_path),
-        "-i", str(musica),
-        "-filter_complex",
-        f"[0:a]volume=0dB[a0];"
-        f"[1:a]volume={ganho_musica}dB,aloop=loop=-1:size=2e+09[a1];"
-        f"[a0][a1]amix=inputs=2:duration=first:dropout_transition=2,"
-        f"dynaudnorm=f=250:g=3[a]",
-        "-map", "[a]",
-        "-c:a", "libmp3lame",
-        "-b:a", "192k",
-        "-ar", "48000",
-        str(saida)
-    ]
-
-    subprocess.run(cmd, check=True, capture_output=True)
-    return saida
-
-def render(audio_path: str, config: dict) -> Path:
+def render(audio_path: str, config: dict, roteiro) -> Path:
     """
     Template para vídeos curtos sequenciais de terror VERTICAL (720x1280)
     """
     audio = Path(audio_path)
     
-    # Configurações
-    images_dir = Path(config.get('IMAGES_DIR_SHORT') or config.get('IMAGE_DIR') or "./imagens")
-    hook = config.get('hook', config.get('titulo', "HISTÓRIA DE TERROR"))
-    num_imagens = config.get('num_imagens', 18)
-    musica_path = config.get('MUSICA')
+    # CORREÇÃO: Imagens estão na pasta "imagens" no mesmo diretório do áudio
+    audio_dir = audio.parent
+    images_dir = audio_dir / "imagens"
     
-    # Configurar diretórios
+    # Fallback para configuração se a pasta local não existir
+    if not images_dir.exists():
+        images_dir = Path(config.get('IMAGES_DIR_SHORT', config.get('IMAGES_DIR', './imagens')))
+    
+    # Configurações básicas
+    hook = roteiro.thumb
+    num_imagens = 18
+    width, height = 720, 1280
+    fps = 30
+    
+    # Preparar diretórios
     output_dir, temp_dir = preparar_diretorios_trabalho(
-        config.get('PASTA_VIDEOS') or config.get('output_dir', "./renders")
+        config.get('PASTA_VIDEOS', "./renders")
     )
     
     print(f"🎯 Hook: {hook}")
-    print(f"📁 Imagens: {images_dir}")
-    print(f"📁 Saída: {output_dir}")
-    
+    print(f"📁 Diretório do áudio: {audio_dir}")
+    print(f"📁 Procurando imagens em: {images_dir}")
+
     try:
         # 1. Selecionar imagens
-        imagens = listar_imagens(images_dir)
-        if not imagens:
+        todas_imagens = listar_imagens(images_dir)
+        if not todas_imagens:
+            # Listar o conteúdo do diretório para debug
+            print(f"📂 Conteúdo do diretório {images_dir}:")
+            for item in images_dir.iterdir():
+                print(f"   - {item.name} ({'pasta' if item.is_dir() else 'arquivo'})")
             raise ValueError(f"Nenhuma imagem encontrada em: {images_dir}")
         
-        # Usar exatamente num_imagens, repetindo se necessário
+        print(f"📸 Encontradas {len(todas_imagens)} imagens")
+        print(f"📸 Primeiras imagens: {[Path(img).name for img in todas_imagens[:3]]}...")
+
+        # Ciclar pelas imagens para completar 18
         imagens_selecionadas = []
-        while len(imagens_selecionadas) < num_imagens:
-            imagens_selecionadas.extend(imagens)
-        imagens_selecionadas = imagens_selecionadas[:num_imagens]
-        random.shuffle(imagens_selecionadas)
+        for i in range(num_imagens):
+            img_index = i % len(todas_imagens)
+            imagens_selecionadas.append(todas_imagens[img_index])
         
-        print(f"🎞️ Usando {len(imagens_selecionadas)} imagens")
-        
+        print(f"🎞️ Usando {len(imagens_selecionadas)} imagens em sequência")
+
         # 2. Obter duração do áudio
         audio_duration = get_media_duration(audio)
-        print(f"⏱️ Duração do áudio: {audio_duration:.2f}s")
-        
-        # 3. Mixar áudio com música se disponível
-        audio_final = audio
-        if musica_path and Path(musica_path).exists():
-            print("🎵 Mixando áudio com música...")
-            audio_final = mixar_audio_com_musica(audio, musica_path)
-            audio_duration = get_media_duration(audio_final)
-            print(f"🎶 Áudio mixado: {audio_duration:.2f}s")
-        
-        # 4. Gerar capa
-        capa_path = temp_dir / "capa.png"
-        if imagens_selecionadas:
-            gerar_capa_pillow(imagens_selecionadas[0], hook, capa_path)
-            print(f"🖼️ Capa gerada: {capa_path}")
-        
-        # 5. Processar legendas
+        print(f"⏱️ Áudio: {audio_duration:.2f}s")
+
+        # 3. Processar legenda (se existir)
+        srt_path = audio.with_suffix('.srt')
         ass_path = temp_dir / "legenda.ass"
         tem_legenda = False
         
-        srt_path = audio.with_suffix('.srt')
         if srt_path.exists():
+            print("📝 Processando legenda...")
             try:
                 srt_to_ass_karaoke(str(srt_path), str(ass_path), "vertical")
-                tem_legenda = ass_path.exists() and ass_path.stat().st_size > 100
-                print("✅ Legenda processada" if tem_legenda else "⚠️ Legenda vazia")
+                tem_legenda = ass_path.exists()
+                print("✅ Legenda processada")
             except Exception as e:
-                print(f"❌ Erro na legenda: {e}")
+                print(f"❌ Erro ao processar legenda: {e}")
+                tem_legenda = False
+        else:
+            print("📝 Nenhuma legenda .srt encontrada")
+
+        # 4. Gerar capa
+        capa_path = temp_dir / "capa.png"
+        gerar_capa_pillow(imagens_selecionadas[0], hook, capa_path)
+        print("🖼️ Capa gerada")
+
+        # 5. Criar clipes
+        video_files = []
         
-        # 6. Criar frame da capa (3 segundos)
-        video_id = audio.stem
-        output_path = output_dir / f"{video_id}.mp4"
-        frame_capa_path = temp_dir / "000_capa.mp4"
-        criar_frame_estatico(capa_path, 3.0, frame_capa_path)
+        # Intro com capa (3 segundos)
+        try:
+            print("🎬 Criando intro com capa...")
+            intro = aplicar_efeito('zoom_pulse', str(capa_path), 3.0)
+            if intro and hasattr(intro, 'filename'):
+                video_files.append(intro.filename)
+                print("✅ Intro criada")
+        except Exception as e:
+            print(f"❌ Erro na intro: {e}")
+            criar_frame_estatico(capa_path, 3.0, temp_dir / "intro_fallback.mp4")
+            video_files.append(temp_dir / "intro_fallback.mp4")
+
+        # Clipes das imagens restantes
+        rest_duration = max(0.0, audio_duration - 3.0)
+        remaining_images = imagens_selecionadas[1:]
         
-        # 7. Processar imagens com efeitos
-        rest = max(0.0, audio_duration - 3.0)
-        imgs_restantes = imagens_selecionadas[1:]
-        
-        clips_norm = []
-        if imgs_restantes and rest > 0:
-            n = len(imgs_restantes)
-            duracao_minima = 2.0
+        if remaining_images and rest_duration > 0:
+            segment_duration = rest_duration / len(remaining_images)
+            efeitos = ['camera_instavel', 'pan', 'zoom_invertido']
+
+            print(f"⏱️ Duração por imagem: {segment_duration:.2f}s")
             
-            # Ajustar número de imagens se áudio for curto
-            if rest < n * duracao_minima:
-                n = max(1, int(rest / duracao_minima))
-                imgs_restantes = imgs_restantes[:n]
-                rest = min(rest, n * duracao_minima)
-            
-            # Calcular durações
-            base = rest / n
-            durs = [max(duracao_minima, base)] * n
-            durs[-1] += (rest - sum(durs))  # Ajuste fino
-            
-            print(f"📊 Durações calculadas: {[f'{d:.1f}s' for d in durs]}")
-            
-            # Gerar clipes com efeitos
-            lista_clips = temp_dir / "lista_clips.txt"
-            with open(lista_clips, "w", encoding="utf-8") as f:
-                f.write(f"file '{frame_capa_path.name}'\n")
-                
-                efeitos = ['panoramica_vertical', 'zoom_invertido', 'pan', 'zoom_pulse', 'camera_instavel']
-                
-                for i, (img, seg) in enumerate(zip(imgs_restantes, durs)):
-                    efeito = efeitos[i % len(efeitos)]
+            for i, img in enumerate(remaining_images):
+                efeito = efeitos[i % len(efeitos)]
+                try:
+                    print(f"🎬 [{i+1}/{len(remaining_images)}] {Path(img).name} → {efeito} ({segment_duration:.2f}s)")
+                    raw_video = aplicar_efeito(efeito, img, segment_duration)
                     
-                    try:
-                        print(f"🎬 [{i+1}/{n}] {efeito} ({seg:.1f}s)...")
-                        raw = aplicar_efeito(efeito, img, seg)
+                    if raw_video and hasattr(raw_video, 'filename'):
+                        video_files.append(raw_video.filename)
+                        print(f"   ✅ {efeito} aplicado")
+                    else:
+                        raise Exception("Efeito não retornou arquivo")
                         
-                        if raw and hasattr(raw, 'filename') and Path(raw.filename).exists():
-                            norm = normalizar_duracao(raw.filename, seg, fps=30)
-                            if norm and Path(norm).exists():
-                                nome_arquivo = f"clip_{i:03d}.mp4"
-                                destino = temp_dir / nome_arquivo
-                                shutil.copy2(norm, destino)
-                                f.write(f"file '{nome_arquivo}'\n")
-                                clips_norm.append(norm)
-                                
-                                # Limpar temporários
-                                Path(norm).unlink(missing_ok=True)
-                                Path(raw.filename).unlink(missing_ok=True)
-                                print(f"   ✅ {nome_arquivo}")
-                    except Exception as e:
-                        print(f"   ❌ Erro: {e}")
+                except Exception as e:
+                    print(f"❌ Erro em {img}: {e}")
+                    # Fallback estático
+                    fallback_path = temp_dir / f"fallback_{i:02d}.mp4"
+                    criar_frame_estatico(img, segment_duration, fallback_path)
+                    video_files.append(fallback_path)
+                    print(f"   ✅ Fallback estático criado")
+
+        print(f"📊 Total de clipes gerados: {len(video_files)}")
+
+        # 6. Concatenar vídeos
+        print("🔗 Concatenando vídeos...")
+        video_id = audio.stem
+        saida_conteudo = temp_dir / f"{video_id}_conteudo.mp4"
         
-        # 8. Render final
-        print("🎥 Renderizando vídeo final...")
-        
-        # Copiar áudio para temp_dir
-        audio_temp = temp_dir / audio_final.name
-        if not audio_temp.exists():
-            shutil.copy2(audio_final, audio_temp)
-        
-        # Configurar comando FFmpeg
-        vf_filter = "ass=legenda.ass" if tem_legenda else "scale=720:1280:flags=lanczos"
-        
-        cmd_final = [
-            "ffmpeg", "-y",
-            "-f", "concat", "-safe", "0", "-i", "lista_clips.txt",
-            "-i", str(audio_temp),
-            "-vf", vf_filter,
-            "-c:v", "libx264", "-preset", "medium", "-crf", "18",
-            "-c:a", "aac", "-b:a", "192k",
-            "-shortest", "-movflags", "+faststart", "-pix_fmt", "yuv420p",
-            str(output_path)
+        # Criar lista de vídeos com caminhos absolutos
+        lista_videos = temp_dir / "lista_videos.txt"
+        with open(lista_videos, "w", encoding="utf-8") as f:
+            for video in video_files:
+                if video and Path(video).exists():
+                    # Usar caminho absoluto para evitar problemas
+                    f.write(f"file '{Path(video).resolve()}'\n")
+                    print(f"   ✅ Adicionado: {Path(video).name}")
+                else:
+                    print(f"⚠️  Arquivo de vídeo não encontrado: {video}")
+
+        # Concatenação com re-encode para compatibilidade
+        cmd_concat = [
+            "ffmpeg", "-y", 
+            "-f", "concat", 
+            "-safe", "0",
+            "-i", str(lista_videos.resolve()),
+            "-c:v", "libx264", 
+            "-preset", "fast", 
+            "-crf", "23",
+            "-c:a", "aac", 
+            "-b:a", "192k",
+            "-pix_fmt", "yuv420p",
+            "-r", str(fps),
+            str(saida_conteudo.resolve())
         ]
         
-        # Executar render
-        result = subprocess.run(cmd_final, check=True, cwd=temp_dir, capture_output=True, text=True)
+        print(f"🎥 Executando concatenação...")
+        result = subprocess.run(cmd_concat, capture_output=True, text=True)
+        
+        if result.returncode != 0:
+            print(f"❌ Erro na concatenação: {result.stderr}")
+            # Tentar método alternativo
+            print("🔄 Tentando método alternativo de concatenação...")
+            saida_conteudo = _concatenar_metodo_alternativo(video_files, saida_conteudo, fps)
+            if not saida_conteudo or not saida_conteudo.exists():
+                raise Exception("Todos os métodos de concatenação falharam")
+        
+        print("✅ Vídeos concatenados")
+
+        # 7. Adicionar áudio e legenda ao vídeo final
+        print("🎵 Adicionando áudio e legenda ao vídeo final...")
+        output_path = output_dir / f"{video_id}.mp4"
+        
+        # Copiar arquivo de legenda para o diretório temp se existir
+        if tem_legenda:
+            legenda_temp = temp_dir / "legenda.ass"
+            if not legenda_temp.exists() and ass_path.exists():
+                shutil.copy2(ass_path, legenda_temp)
+        
+        # Comando final com ou sem legenda
+        if tem_legenda and legenda_temp.exists():
+            print("🔤 Queimando legenda no vídeo...")
+            cmd_final = [
+                "ffmpeg", "-y",
+                "-i", str(saida_conteudo.resolve()),
+                "-i", str(audio.resolve()),
+                "-vf", f"ass={legenda_temp.name}",  # Queimar legenda
+                "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+                "-c:a", "aac", "-b:a", "192k",
+                "-shortest",  # Terminar quando o áudio acabar
+                "-movflags", "+faststart",
+                str(output_path.resolve())
+            ]
+        else:
+            print("📝 Sem legenda para queimar")
+            cmd_final = [
+                "ffmpeg", "-y",
+                "-i", str(saida_conteudo.resolve()),
+                "-i", str(audio.resolve()),
+                "-c:v", "copy",  # Copiar vídeo sem re-encode
+                "-c:a", "aac", "-b:a", "192k",
+                "-shortest",
+                "-movflags", "+faststart",
+                str(output_path.resolve())
+            ]
+        
+        # Executar comando final no diretório temp para encontrar a legenda
+        subprocess.run(cmd_final, cwd=temp_dir, capture_output=True, check=True)
         
         if output_path.exists():
             duracao_final = get_media_duration(output_path)
-            print(f"✅ Vídeo final: {output_path}")
-            print(f"⏱️ Duração: {duracao_final:.2f}s")
+            duracao_audio = get_media_duration(audio)
+            print(f"✅ Vídeo finalizado: {output_path}")
+            print(f"⏱️ Duração vídeo: {duracao_final:.2f}s")
+            print(f"⏱️ Duração áudio: {duracao_audio:.2f}s")
+            
+            if tem_legenda:
+                print("🔤 Legenda queimada com sucesso")
+            
+            # Verificar sincronização
+            diferenca = abs(duracao_final - duracao_audio)
+            if diferenca > 0.5:
+                print(f"⚠️  Atenção: Diferença de {diferenca:.2f}s entre vídeo e áudio")
+            
             return output_path
         else:
             raise Exception("Vídeo final não foi criado")
             
-    except subprocess.CalledProcessError as e:
-        print(f"❌ Erro no render: {e}")
-        # Tentar sem legenda se falhou
-        if tem_legenda:
-            print("🔄 Tentando sem legenda...")
-            cmd_final[cmd_final.index("-vf") + 1] = "scale=720:1280:flags=lanczos"
-            try:
-                subprocess.run(cmd_final, check=True, cwd=temp_dir, capture_output=True)
-                return output_path if output_path.exists() else None
-            except:
-                pass
-        return None
-        
     except Exception as e:
         print(f"❌ Erro no template: {e}")
         import traceback
@@ -223,3 +247,41 @@ def render(audio_path: str, config: dict) -> Path:
         
     finally:
         limpar_diretorio_temp(temp_dir)
+
+
+def _concatenar_metodo_alternativo(video_files, saida_conteudo, fps):
+    """Método alternativo para concatenação quando o primeiro falha"""
+    try:
+        # Criar arquivo de lista temporário
+        lista_temp = saida_conteudo.parent / "lista_alternativa.txt"
+        with open(lista_temp, "w", encoding="utf-8") as f:
+            for video in video_files:
+                if Path(video).exists():
+                    f.write(f"file '{Path(video).resolve()}'\n")
+        
+        # Método alternativo com diferentes parâmetros
+        cmd_alt = [
+            "ffmpeg", "-y",
+            "-f", "concat",
+            "-safe", "0", 
+            "-i", str(lista_temp.resolve()),
+            "-c:v", "libx264",
+            "-preset", "superfast",
+            "-crf", "25",
+            "-r", str(fps),
+            "-pix_fmt", "yuv420p",
+            "-an",  # Sem áudio por enquanto
+            str(saida_conteudo.resolve())
+        ]
+        
+        result = subprocess.run(cmd_alt, capture_output=True, text=True)
+        if result.returncode == 0:
+            print("✅ Concatenação alternativa bem-sucedida")
+            return saida_conteudo
+        else:
+            print(f"❌ Método alternativo também falhou: {result.stderr}")
+            return None
+            
+    except Exception as e:
+        print(f"❌ Erro no método alternativo: {e}")
+        return None

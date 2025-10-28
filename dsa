@@ -1,0 +1,16 @@
+warning: in the working copy of 'canais/filosofia/agente.txt', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'canais/filosofia/config.py', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'video.py', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'video_maker/templates/long_religioso.py', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'video_maker/templates/short_filosofia.py', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'video_maker/templates/short_sequencial.py', CRLF will be replaced by LF the next time Git touches it
+video.py:94: trailing whitespace.
+[32m+[m[32m                    info_video.duracao or 0,[m[41m                    [m
+video.py:186: trailing whitespace.
+[32m+[m[32m                thumb=roteiro.thumb if roteiro else None,[m[41m                [m
+video_maker/templates/short_filosofia.py:79: trailing whitespace.
+[32m+[m[41m            [m
+video_maker/templates/short_filosofia.py:82: trailing whitespace.
+[32m+[m[41m            [m
+video_maker/templates/short_filosofia.py:91: trailing whitespace.
+[32m+[m[41m            [m

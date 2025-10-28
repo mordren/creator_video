@@ -18,9 +18,9 @@ RESOLUCAO_LONG = "1280x720"   # Horizontal para vídeos longos
 IDIOMA = "en"
 # ✅ NOVO: Tamanhos separados para short e long
 
-TAMANHO_MAX_LONG = 3000
+TAMANHO_MAX_LONG = 3700
 # ✅ NOVO: Durações separadas para short e long
-DURACAO_MIN_LONG = 25
+DURACAO_MIN_LONG = 30
 TEMPLATE_LONG = 'long_religioso'  # Para vídeos longos
 
 
@@ -32,8 +32,8 @@ TEMAS_FILE = "temas.txt"        # Lista de temas
 
 # -------------------------- TTS ----------------------------------------------------
 EDGE_TTS_VOICE = "en-US-AndrewNeural"
-EDGE_TTS_RATE = "-6%"
-EDGE_TTS_PITCH = "+0Hz"
+EDGE_TTS_RATE = "-8%"
+EDGE_TTS_PITCH = "+1Hz"
 EDGE_TTS_LEGENDAS = True
 EDGE_TTS_AJUSTAR_TIMESTAMPS: True  
 

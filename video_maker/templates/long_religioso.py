@@ -40,7 +40,7 @@ def ffprobe_duration(path: Path) -> float:
     except Exception:
         return 0.0
 
-def render(audio_path: str, config: dict) -> Path:
+def render(audio_path: str, config: dict, roteiro) -> Path:
     """
     Template para vídeos longos com vídeos pré-processados - HORIZONTAL (1280x720)
     

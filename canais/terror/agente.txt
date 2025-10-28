@@ -36,9 +36,9 @@ Sua missão: escrever um roteiro **curto, tenso e humano**, com **EXATAMENTE {TA
 📌 REGRAS CRÍTICAS
 - **Exatamente {TAMANHO_MAX} palavras.** Conte e ajuste
 - Linguagem simples (nível ~5º ano), direta, natural
-- **Proibido:** títulos, hashtags, metatexto
 - Mantenha foco humano, realista e plausível
 - **Tom de narração oral:** frases que fluem quando lidas em voz alta
+3 a 4 palavras para a thumbnail — devem usar pontuação enfática (! ou ?) e expressar a emoção central do vídeo
 
 💀 TOM E ATMOSFERA
 - Frio, tenso e empático
@@ -49,3 +49,6 @@ Sua missão: escrever um roteiro **curto, tenso e humano**, com **EXATAMENTE {TA
 Se o texto tiver mais ou menos que **{TAMANHO_MAX}** palavras, **reescreva automaticamente**
 
 **Retorne apenas o texto final**, sem explicações, títulos ou comentários.
+
+Retorne o json como no exemplo abaixo:
+{exemplo_resposta}

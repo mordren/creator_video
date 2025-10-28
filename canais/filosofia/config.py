@@ -11,7 +11,8 @@ PASTA_BASE = Path(r"E:\Canal Dark\Vídeos Automáticos")
 PASTA_CANAL = Path(__file__).parent  # Pasta atual do canal
 PASTA_VIDEOS = Path(r"E:\Canal Dark\Vídeos Automáticos\Vídeos")
 MUSICA = Path(r"C:\Users\mordren\Documents\creator\canais\filosofia\assets\music\filosofia.mp3")
-IMAGES_DIR_SHORT = Path(r"C:\Users\mordren\Documents\creator\canais\filosofia\assets\imagens_template")
+IMAGES_DIR_SHORT =  Path(r"C:\Users\mordren\Documents\Gerar Filosofia\assets\imagens_base")
+IMAGES_DIR_LONG = Path(r"C:\Users\mordren\Documents\creator\canais\filosofia\assets\imagens_long")
 NOME = "Reflexões do Poder"
 LINK = "@reflexoes_do_poder"
 
@@ -25,7 +26,7 @@ RESOLUCAO_LONG = "1280x720"   # Horizontal para vídeos longos
 # -------------------------- Parâmetros Comuns --------------------------------------
 IDIOMA = "pt"
 # ✅ NOVO: Tamanhos separados para short e long
-TAMANHO_MAX_SHORT = 130
+TAMANHO_MAX_SHORT = 125
 TAMANHO_MAX_LONG = 3000
 
 # ✅ NOVO: Durações separadas para short e long

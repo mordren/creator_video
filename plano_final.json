@@ -1,0 +1,290 @@
+[
+  {
+    "segment_index": 1,
+    "caption": "Você se cobra demais, e por quê?",
+    "matches": [
+      {
+        "arquivo": "15.mp4",
+        "imagem": "Calendário com dias rasgados",
+        "score": 0.2871955335140228
+      },
+      {
+        "arquivo": "89.mp4",
+        "imagem": "Teclado com letras gastas",
+        "score": 0.2606714963912964
+      },
+      {
+        "arquivo": "12.mp4",
+        "imagem": "Ampulheta derramada na mesa",
+        "score": 0.24951913952827454
+      }
+    ],
+    "arquivo": "15.mp4",
+    "imagem": "Calendário com dias rasgados",
+    "score": 0.2871955335140228
+  },
+  {
+    "segment_index": 2,
+    "caption": "Essa cobrança, de onde vem?",
+    "matches": [
+      {
+        "arquivo": "169.mp4",
+        "imagem": "Carta de baralho perdida no chão",
+        "score": 0.3790411949157715
+      },
+      {
+        "arquivo": "145.mp4",
+        "imagem": "Cheque antigo dobrado na carteira",
+        "score": 0.3787895143032074
+      },
+      {
+        "arquivo": "9.mp4",
+        "imagem": "Chave antiga numa mão trêmula",
+        "score": 0.3397054076194763
+      }
+    ],
+    "arquivo": "169.mp4",
+    "imagem": "Carta de baralho perdida no chão",
+    "score": 0.3790411949157715
+  },
+  {
+    "segment_index": 3,
+    "caption": "Adler já sacou: neurose é perfeccionismo disfarçado.",
+    "matches": [
+      {
+        "arquivo": "84.mp4",
+        "imagem": "Cursor piscando num documento vazio",
+        "score": 0.507484495639801
+      },
+      {
+        "arquivo": "25.mp4",
+        "imagem": "Sombra que não corresponde ao corpo",
+        "score": 0.49767911434173584
+      },
+      {
+        "arquivo": "6.mp4",
+        "imagem": "Encruzilhada com placas contraditórias",
+        "score": 0.45537084341049194
+      }
+    ],
+    "arquivo": "84.mp4",
+    "imagem": "Cursor piscando num documento vazio",
+    "score": 0.507484495639801
+  },
+  {
+    "segment_index": 4,
+    "caption": "A gente gasta uma vida inteira tentando provar nosso valor para os outros e, principalmente, para nós mesmos.",
+    "matches": [
+      {
+        "arquivo": "91.mp4",
+        "imagem": "Balança antiga prestes a pender",
+        "score": 0.3847638964653015
+      },
+      {
+        "arquivo": "46.mp4",
+        "imagem": "Pássaro saindo da jaula",
+        "score": 0.37392544746398926
+      },
+      {
+        "arquivo": "9.mp4",
+        "imagem": "Chave antiga numa mão trêmula",
+        "score": 0.35353004932403564
+      }
+    ],
+    "arquivo": "91.mp4",
+    "imagem": "Balança antiga prestes a pender",
+    "score": 0.3847638964653015
+  },
+  {
+    "segment_index": 5,
+    "caption": "Mas, ei, a régua não existe!",
+    "matches": [
+      {
+        "arquivo": "169.mp4",
+        "imagem": "Carta de baralho perdida no chão",
+        "score": 0.44483745098114014
+      },
+      {
+        "arquivo": "117.mp4",
+        "imagem": "Bruma cobrindo o farol ao amanhecer",
+        "score": 0.4061497151851654
+      },
+      {
+        "arquivo": "197.mp4",
+        "imagem": "Porta-joias vazio com forro gasto",
+        "score": 0.3943422734737396
+      }
+    ],
+    "arquivo": "117.mp4",
+    "imagem": "Bruma cobrindo o farol ao amanhecer",
+    "score": 0.4061497151851654
+  },
+  {
+    "segment_index": 6,
+    "caption": "A perfeição é uma armadilha constante, que nos leva à paralisia.",
+    "matches": [
+      {
+        "arquivo": "84.mp4",
+        "imagem": "Cursor piscando num documento vazio",
+        "score": 0.6037009954452515
+      },
+      {
+        "arquivo": "35.mp4",
+        "imagem": "Bússola quebrada apontando \"nada\"",
+        "score": 0.5416507720947266
+      },
+      {
+        "arquivo": "2.mp4",
+        "imagem": "Ponte estreita sobre um abismo",
+        "score": 0.5176434516906738
+      }
+    ],
+    "arquivo": "35.mp4",
+    "imagem": "Bússola quebrada apontando \"nada\"",
+    "score": 0.5416507720947266
+  },
+  {
+    "segment_index": 7,
+    "caption": "Adler dizia: coragem não é ausência de medo, é seguir em frente apesar dele.",
+    "matches": [
+      {
+        "arquivo": "46.mp4",
+        "imagem": "Pássaro saindo da jaula",
+        "score": 0.5661681890487671
+      },
+      {
+        "arquivo": "196.mp4",
+        "imagem": "Ponte pênsil oscilando ao caminhar",
+        "score": 0.5625697374343872
+      },
+      {
+        "arquivo": "165.mp4",
+        "imagem": "Mão tremendo para tocar a campainha",
+        "score": 0.519830048084259
+      }
+    ],
+    "arquivo": "46.mp4",
+    "imagem": "Pássaro saindo da jaula",
+    "score": 0.5661681890487671
+  },
+  {
+    "segment_index": 8,
+    "caption": "Errar faz parte da experiência humana.",
+    "matches": [
+      {
+        "arquivo": "53.mp4",
+        "imagem": "Brinquedo antigo quebrado no chão",
+        "score": 0.6007667779922485
+      },
+      {
+        "arquivo": "95.mp4",
+        "imagem": "Ponte queimada atrás do viajante",
+        "score": 0.5431763529777527
+      },
+      {
+        "arquivo": "38.mp4",
+        "imagem": "Pegadas que desaparecem na areia",
+        "score": 0.5126742720603943
+      }
+    ],
+    "arquivo": "53.mp4",
+    "imagem": "Brinquedo antigo quebrado no chão",
+    "score": 0.6007667779922485
+  },
+  {
+    "segment_index": 9,
+    "caption": "Cair também faz parte.",
+    "matches": [
+      {
+        "arquivo": "188.mp4",
+        "imagem": "Nevasca apagando pegadas recentes",
+        "score": 0.3186098337173462
+      },
+      {
+        "arquivo": "75.mp4",
+        "imagem": "Sino de templo prestes a tocar",
+        "score": 0.31470930576324463
+      },
+      {
+        "arquivo": "172.mp4",
+        "imagem": "Ferro antigo marcando madeira",
+        "score": 0.30917227268218994
+      }
+    ],
+    "arquivo": "188.mp4",
+    "imagem": "Nevasca apagando pegadas recentes",
+    "score": 0.3186098337173462
+  },
+  {
+    "segment_index": 10,
+    "caption": "O que realmente importa é levantar, aprender com os erros e seguir em frente, sempre sabendo que a jornada é muito mais importante que o destino final.",
+    "matches": [
+      {
+        "arquivo": "95.mp4",
+        "imagem": "Ponte queimada atrás do viajante",
+        "score": 0.5743626356124878
+      },
+      {
+        "arquivo": "5.mp4",
+        "imagem": "Cruzamento de trilhas no mato",
+        "score": 0.5551847815513611
+      },
+      {
+        "arquivo": "46.mp4",
+        "imagem": "Pássaro saindo da jaula",
+        "score": 0.5060568451881409
+      }
+    ],
+    "arquivo": "95.mp4",
+    "imagem": "Ponte queimada atrás do viajante",
+    "score": 0.5743626356124878
+  },
+  {
+    "segment_index": 11,
+    "caption": "Que tal se libertar dessa pressão paralisante hoje mesmo?",
+    "matches": [
+      {
+        "arquivo": "196.mp4",
+        "imagem": "Ponte pênsil oscilando ao caminhar",
+        "score": 0.5583473443984985
+      },
+      {
+        "arquivo": "198.mp4",
+        "imagem": "Copo trincado cheio de água",
+        "score": 0.5407410860061646
+      },
+      {
+        "arquivo": "100.mp4",
+        "imagem": "Linha vermelha esticada… e rompendo",
+        "score": 0.5245070457458496
+      }
+    ],
+    "arquivo": "196.mp4",
+    "imagem": "Ponte pênsil oscilando ao caminhar",
+    "score": 0.5583473443984985
+  },
+  {
+    "segment_index": 12,
+    "caption": "Se fez sentido para você, espalhe essa ideia libertadora.",
+    "matches": [
+      {
+        "arquivo": "1.mp4",
+        "imagem": "Porta entreaberta com luz vazando",
+        "score": 0.46721428632736206
+      },
+      {
+        "arquivo": "93.mp4",
+        "imagem": "Moeda lançada, congelada no ar",
+        "score": 0.40492886304855347
+      },
+      {
+        "arquivo": "94.mp4",
+        "imagem": "Fênix de papel pegando fogo",
+        "score": 0.4020853340625763
+      }
+    ],
+    "arquivo": "1.mp4",
+    "imagem": "Porta entreaberta com luz vazando",
+    "score": 0.46721428632736206
+  }
+]

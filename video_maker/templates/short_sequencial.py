@@ -9,7 +9,7 @@ from video_maker.subtitle_tools import srt_to_ass_karaoke
 from video_maker.video_utils import (
     get_media_duration, listar_imagens, 
     criar_frame_estatico, gerar_capa_pillow,
-    preparar_diretorios_trabalho, limpar_diretorio_temp
+    preparar_diretorios_trabalho, limpar_diretorio_temp, safe_copy
 )
 
 def render(audio_path: str, config: dict, roteiro) -> Path:
@@ -67,16 +67,19 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
         print(f"⏱️ Áudio: {audio_duration:.2f}s")
 
         # 3. Processar legenda (se existir)
-        srt_path = audio.with_suffix('.srt')
+        srt_path = Path(audio_dir, roteiro.id_video).with_suffix('.srt')
         ass_path = temp_dir / "legenda.ass"
         tem_legenda = False
-        
+                
         if srt_path.exists():
             print("📝 Processando legenda...")
             try:
                 srt_to_ass_karaoke(str(srt_path), str(ass_path), "vertical")
                 tem_legenda = ass_path.exists()
-                print("✅ Legenda processada")
+                if tem_legenda:
+                    print("✅ Legenda processada e convertida para ASS")
+                else:
+                    print("❌ Legenda ASS não foi criada após conversão")
             except Exception as e:
                 print(f"❌ Erro ao processar legenda: {e}")
                 tem_legenda = False
@@ -181,44 +184,60 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
         print("✅ Vídeos concatenados")
 
         # 7. Adicionar áudio e legenda ao vídeo final
-        print("🎵 Adicionando áudio e legenda ao vídeo final...")
         output_path = output_dir / f"{video_id}.mp4"
-        
-        # Copiar arquivo de legenda para o diretório temp se existir
-        if tem_legenda:
-            legenda_temp = temp_dir / "legenda.ass"
-            if not legenda_temp.exists() and ass_path.exists():
-                shutil.copy2(ass_path, legenda_temp)
-        
+
+        # Verificar se a legenda existe e copiar para temp
+        legenda_temp = temp_dir / "legenda.ass"
+        if tem_legenda and ass_path.exists() and not legenda_temp.exists():
+            shutil.copy2(ass_path, legenda_temp)
+            print(f"📝 Legenda copiada para: {legenda_temp}")
+
+        audio_temp = temp_dir / audio.name
+        safe_copy(audio, audio_temp)
+
         # Comando final com ou sem legenda
         if tem_legenda and legenda_temp.exists():
             print("🔤 Queimando legenda no vídeo...")
-            cmd_final = [
+                        
+            # caminho absoluto → em formato POSIX
+            legenda_path_abs = legenda_temp.resolve().as_posix()                # E:/Canal Terror/Vídeos/temp/legenda.ass
+            # escapar o ":" do drive (E:)
+            legenda_esc = legenda_path_abs.replace(':', r'\:')                  # E\:/Canal Terror/Vídeos/temp/legenda.ass
+
+            cmd = [
                 "ffmpeg", "-y",
-                "-i", str(saida_conteudo.resolve()),
-                "-i", str(audio.resolve()),
-                "-vf", f"ass={legenda_temp.name}",  # Queimar legenda
-                "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-                "-c:a", "aac", "-b:a", "192k",
-                "-shortest",  # Terminar quando o áudio acabar
-                "-movflags", "+faststart",
-                str(output_path.resolve())
-            ]
-        else:
-            print("📝 Sem legenda para queimar")
-            cmd_final = [
-                "ffmpeg", "-y",
-                "-i", str(saida_conteudo.resolve()),
-                "-i", str(audio.resolve()),
-                "-c:v", "copy",  # Copiar vídeo sem re-encode
+                "-i", str(saida_conteudo),
+                "-i", str(audio_temp),
+                "-vf", f"ass='{legenda_esc}'",  # ↩️ aspas dentro do valor do filtro (por causa do espaço em 'Canal Terror')
+                "-c:v", "libx264", "-preset", "fast", "-crf", "21",
                 "-c:a", "aac", "-b:a", "192k",
                 "-shortest",
-                "-movflags", "+faststart",
-                str(output_path.resolve())
+                str(output_path)
             ]
-        
-        # Executar comando final no diretório temp para encontrar a legenda
-        subprocess.run(cmd_final, cwd=temp_dir, capture_output=True, check=True)
+            print("🔧 Comando FFmpeg:", ' '.join(cmd))
+            subprocess.run(cmd, check=True, capture_output=True)
+        try:
+            print("🎬 Renderizando vídeo final...")
+            #result = subprocess.run(, capture_output=True, text=True, check=True)
+            print("✅ Vídeo final renderizado com sucesso")
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Erro ao renderizar vídeo final: {e}")
+            print(f"📋 Stderr: {e.stderr}")
+            
+            # Tentar fallback sem legenda se houver erro
+            if tem_legenda:
+                print("🔄 Tentando fallback sem legenda...")
+                cmd_fallback = [
+                    "ffmpeg", "-y",
+                    "-i", str(saida_conteudo.resolve()),
+                    "-i", str(audio.resolve()),
+                    "-c:v", "copy",
+                    "-c:a", "aac", "-b:a", "192k",
+                    "-shortest",
+                    "-movflags", "+faststart",
+                    str(output_path.resolve())
+                ]
+                subprocess.run(cmd_fallback, capture_output=True, check=True)
         
         if output_path.exists():
             duracao_final = get_media_duration(output_path)

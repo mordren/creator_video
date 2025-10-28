@@ -1,0 +1,660 @@
+{% extends "base.html" %}
+
+{% block title %}Novo Roteiro - Sistema de Vídeos{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-plus me-2"></i>Novo Roteiro</h1>
+            <a href="{{ url_for('list_videos') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-magic me-2"></i>Gerar Novo Roteiro</h5>
+            </div>
+            <div class="card-body">
+                <form id="form-roteiro">
+                    <div class="mb-3">
+                        <label for="canal" class="form-label">Canal *</label>
+                        <select class="form-select" id="canal" name="canal" required>
+                            <option value="">Selecione um canal...</option>
+                            {% for canal in canais %}
+                            <option value="{{ canal.nome }}">{{ canal.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="tipo_video" class="form-label">Tipo de Vídeo *</label>
+                        <select class="form-select" id="tipo_video" name="tipo_video" required>
+                            <option value="short">🎬 Short (Vertical - 720x1280)</option>
+                            <option value="long">🎥 Long (Horizontal - 1280x720)</option>
+                        </select>
+                    </div>
+
+                    <!-- ✅ NOVO: Campo de Duração Personalizada -->
+                    <div class="mb-3">
+                        <label for="duracao" class="form-label">Duração do Vídeo</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="duracao" name="duracao" 
+                                   min="0.5" max="30" step="0.5" placeholder="Padrão: 1 min">
+                            <span class="input-group-text">minutos</span>
+                            <button type="button" class="btn btn-outline-secondary" id="btn-duracao-padrao" title="Usar duração padrão">
+                                <i class="fas fa-undo"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">
+                            Duração desejada em minutos. Deixe em branco para usar o padrão do canal.
+                            <span id="info-palavras" class="text-info fw-medium ms-1"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="tema" class="form-label">Tema</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="tema" name="tema" 
+                                   placeholder="Ex: Sócrates, A virtude do conhecimento">
+                            <button type="button" class="btn btn-outline-secondary" id="btn-tema-aleatorio">
+                                <i class="fas fa-random"></i> Aleatório
+                            </button>
+                        </div>
+                        <div class="form-text">
+                            Formato: "Autor, Assunto". Deixe em branco para tema aleatório.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Temas Disponíveis</label>
+                        <div id="temas-container" class="border p-3 bg-light rounded" style="max-height: 200px; overflow-y: auto;">
+                            <div class="text-muted text-center py-3">
+                                <i class="fas fa-folder-open me-2"></i>
+                                Selecione um canal para ver os temas disponíveis
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="provider" class="form-label">Provedor de IA</label>
+                        <select class="form-select" id="provider" name="provider">
+                            <option value="">Padrão do canal</option>
+                            <option value="gemini">Gemini</option>
+                            <option value="grok">Grok</option>
+                            <option value="claude">Claude</option>
+                        </select>
+                    </div>
+
+                    <!-- ✅ ATUALIZADO: Informações com detalhes de duração -->
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Informações:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li><strong>Short:</strong> Vídeos verticais para TikTok/Shorts (720x1280)</li>
+                            <li><strong>Long:</strong> Vídeos horizontais para YouTube (1280x720)</li>
+                            <li><strong>Taxa de palavras:</strong> ~140 palavras por minuto de áudio</li>
+                            <li><strong>Duração padrão:</strong> Short 1min | Long 3min</li>
+                            <li>O tempo de geração pode variar de 30 segundos a 2 minutos</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg" id="btn-gerar">
+                            <i class="fas fa-wand-magic-sparkles me-2"></i>Gerar Roteiro
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-history me-2"></i>Status</h5>
+            </div>
+            <div class="card-body">
+                <div id="status-geracao">
+                    <p class="text-muted text-center mb-0">
+                        <i class="fas fa-clock me-2"></i>Aguardando geração...
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ✅ NOVO: Card de Pré-visualização de Duração -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-calculator me-2"></i>Pré-visualização</h5>
+            </div>
+            <div class="card-body">
+                <div id="preview-container">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-calculator fa-2x mb-2"></i>
+                        <p>Configure a duração para ver a estimativa</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-lightbulb me-2"></i>Dicas</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        <strong>Temas específicos</strong> geram conteúdo mais focado
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        <strong>Duração personalizada</strong> controla o tamanho do texto
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        <strong>Shorts:</strong> Ideal para redes sociais (15-60 segundos)
+                    </li>
+                    <li>
+                        <i class="fas fa-check text-success me-2"></i>
+                        <strong>Longs:</strong> Perfeito para YouTube (2-10 minutos)
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Resultado -->
+<div class="modal fade" id="modalResultado" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle text-success me-2"></i>
+                    Roteiro Gerado com Sucesso!
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="resultado-conteudo">
+                    <!-- Conteúdo será preenchido via JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Fechar
+                </button>
+                <a href="#" class="btn btn-primary" id="btn-ver-roteiro">
+                    <i class="fas fa-eye me-2"></i>Ver Roteiro
+                </a>
+                <a href="{{ url_for('novo_roteiro') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-plus me-2"></i>Novo Roteiro
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const canalSelect = document.getElementById('canal');
+    const temaInput = document.getElementById('tema');
+    const tipoVideoSelect = document.getElementById('tipo_video');
+    const duracaoInput = document.getElementById('duracao');
+    const btnDuracaoPadrao = document.getElementById('btn-duracao-padrao');
+    const infoPalavras = document.getElementById('info-palavras');
+    const btnTemaAleatorio = document.getElementById('btn-tema-aleatorio');
+    const temasContainer = document.getElementById('temas-container');
+    const formRoteiro = document.getElementById('form-roteiro');
+    const statusGeracao = document.getElementById('status-geracao');
+    const btnGerar = document.getElementById('btn-gerar');
+    const previewContainer = document.getElementById('preview-container');
+
+    // ✅ CONFIGURAÇÕES
+    const PALAVRAS_POR_MINUTO = 140;
+    const configPadrao = {
+        short: { duracao: 1, palavras: 140, icon: '🎬', label: 'Short' },
+        long: { duracao: 3, palavras: 420, icon: '🎥', label: 'Long' }
+    };
+
+    let configCanalAtual = null;
+
+    // ✅ CARREGAR CONFIGURAÇÕES DO CANAL
+    function carregarConfigCanal() {
+        const canal = canalSelect.value;
+        const tipoVideo = tipoVideoSelect.value;
+        
+        if (canal && tipoVideo) {
+            fetch(`/api/canais/${canal}/config`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.config && !data.erro) {
+                        configCanalAtual = data.config;
+                        atualizarInterfaceConfig();
+                    } else {
+                        configCanalAtual = null;
+                        usarConfigPadrao();
+                    }
+                })
+                .catch(error => {
+                    console.log('Erro ao carregar configuração, usando padrão:', error);
+                    configCanalAtual = null;
+                    usarConfigPadrao();
+                });
+        }
+    }
+
+    function usarConfigPadrao() {
+        const tipoVideo = tipoVideoSelect.value;
+        const padrao = configPadrao[tipoVideo];
+        duracaoInput.placeholder = `Padrão: ${padrao.duracao} min`;
+        atualizarPreview();
+    }
+
+    function atualizarInterfaceConfig() {
+        const tipoVideo = tipoVideoSelect.value;
+        if (configCanalAtual) {
+            const duracaoPadrao = tipoVideo === 'short' ? 
+                configCanalAtual.DURACAO_MIN_SHORT : configCanalAtual.DURACAO_MIN_LONG;
+            const palavrasPadrao = tipoVideo === 'short' ?
+                configCanalAtual.TAMANHO_MAX_SHORT : configCanalAtual.TAMANHO_MAX_LONG;
+            
+            duracaoInput.placeholder = `Padrão: ${duracaoPadrao} min`;
+            duracaoInput.title = `Duração padrão: ${duracaoPadrao} min (~${palavrasPadrao} palavras)`;
+        }
+        atualizarPreview();
+    }
+
+    // ✅ CÁLCULO DE PALAVRAS E PREVIEW
+    function calcularPalavras() {
+        const duracao = parseFloat(duracaoInput.value);
+        
+        if (duracao && duracao > 0) {
+            const palavras = Math.round(duracao * PALAVRAS_POR_MINUTO);
+            infoPalavras.textContent = `≈ ${palavras} palavras`;
+            infoPalavras.style.display = 'inline';
+        } else {
+            infoPalavras.style.display = 'none';
+        }
+        atualizarPreview();
+    }
+
+    function atualizarPreview() {
+        const tipoVideo = tipoVideoSelect.value;
+        const duracao = parseFloat(duracaoInput.value);
+        const padrao = configPadrao[tipoVideo];
+        
+        let duracaoUsar = duracao || (configCanalAtual ? 
+            (tipoVideo === 'short' ? configCanalAtual.DURACAO_MIN_SHORT : configCanalAtual.DURACAO_MIN_LONG) 
+            : padrao.duracao);
+        
+        let palavrasUsar = Math.round(duracaoUsar * PALAVRAS_POR_MINUTO);
+        
+        const resolucao = tipoVideo === 'short' ? 
+            (configCanalAtual?.RESOLUCAO_SHORT || '720x1280') : 
+            (configCanalAtual?.RESOLUCAO_LONG || '1280x720');
+
+        previewContainer.innerHTML = `
+            <div class="text-center">
+                <div class="mb-3">
+                    <span class="display-6">${padrao.icon}</span>
+                    <h6 class="mt-2">${padrao.label} • ${resolucao}</h6>
+                </div>
+                <div class="row">
+                    <div class="col-6">
+                        <div class="border rounded p-2 bg-white">
+                            <small class="text-muted">Duração</small>
+                            <div class="fw-bold text-primary">${duracaoUsar} min</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-2 bg-white">
+                            <small class="text-muted">Palavras</small>
+                            <div class="fw-bold text-success">~${palavrasUsar}</div>
+                        </div>
+                    </div>
+                </div>
+                ${duracao ? '<div class="mt-2"><small class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Duração personalizada</small></div>' : ''}
+            </div>
+        `;
+    }
+
+    // ✅ BOTÃO DURAÇÃO PADRÃO
+    function aplicarDuracaoPadrao() {
+        duracaoInput.value = '';
+        calcularPalavras();
+    }
+
+    // ✅ CARREGAR TEMAS
+    function carregarTemas(canal) {
+        statusGeracao.innerHTML = `
+            <div class="text-center text-muted">
+                <div class="spinner-border spinner-border-sm me-2"></div>
+                Carregando temas...
+            </div>
+        `;
+        
+        fetch(`/api/canais/${canal}/temas`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Resposta da API de temas:', data);
+                
+                if (data.erro) {
+                    temasContainer.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            ${data.erro}
+                        </div>
+                    `;
+                } else if (data.temas && data.temas.length > 0) {
+                    let html = `
+                        <div class="mb-2">
+                            <small class="text-muted">
+                                <i class="fas fa-list me-1"></i>
+                                ${data.temas.length} temas disponíveis
+                                ${data.arquivo ? ` (${data.arquivo.split('/').pop()})` : ''}
+                            </small>
+                        </div>
+                        <div class="row g-2">
+                    `;
+                    
+                    data.temas.forEach((tema, index) => {
+                        const temaEscapado = tema.replace(/'/g, "&#39;").replace(/"/g, '&quot;');
+                        html += `
+                            <div class="col-12">
+                                <div class="tema-item border rounded p-2 bg-white cursor-pointer" 
+                                     onclick="selecionarTema(this, '${temaEscapado}')"
+                                     title="Clique para selecionar">
+                                    <small class="text-dark">${tema}</small>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    temasContainer.innerHTML = html;
+                } else {
+                    temasContainer.innerHTML = `
+                        <div class="alert alert-info text-center">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Nenhum tema encontrado.
+                            <div class="mt-1 small">O arquivo temas.txt pode estar vazio ou não existir.</div>
+                        </div>
+                    `;
+                }
+                statusGeracao.innerHTML = '<p class="text-muted text-center mb-0"><i class="fas fa-clock me-2"></i>Aguardando geração...</p>';
+            })
+            .catch(error => {
+                console.error('Erro ao carregar temas:', error);
+                temasContainer.innerHTML = `
+                    <div class="alert alert-danger text-center">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Erro ao carregar temas
+                    </div>
+                `;
+                statusGeracao.innerHTML = '<p class="text-muted text-center mb-0"><i class="fas fa-clock me-2"></i>Aguardando geração...</p>';
+            });
+    }
+
+    // ✅ SELEÇÃO DE TEMA
+    window.selecionarTema = function(elemento, tema) {
+        // Remove destaque anterior
+        document.querySelectorAll('.tema-item').forEach(item => {
+            item.classList.remove('border-primary', 'bg-primary-light');
+        });
+        
+        // Adiciona destaque ao selecionado
+        elemento.classList.add('border-primary', 'bg-primary-light');
+        
+        // Preenche o campo de tema
+        temaInput.value = tema;
+    };
+
+    // ✅ GERAÇÃO DE ROTEIRO
+    function gerarRoteiro(formData) {
+        // Desabilitar botão e mostrar loading
+        btnGerar.disabled = true;
+        btnGerar.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>Gerando...';
+
+        statusGeracao.innerHTML = `
+            <div class="alert alert-info">
+                <div class="d-flex align-items-center">
+                    <div class="spinner-border spinner-border-sm me-3"></div>
+                    <div>
+                        <strong>Gerando roteiro...</strong>
+                        <div class="small">Isso pode levar alguns instantes</div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        fetch('/api/gerar-roteiro', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                statusGeracao.innerHTML = `
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>Sucesso!</strong> Roteiro gerado e salvo.
+                    </div>
+                `;
+                
+                mostrarResultado(data);
+            } else {
+                statusGeracao.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Erro:</strong> ${data.message}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            statusGeracao.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Erro:</strong> Falha na comunicação com o servidor
+                </div>
+            `;
+        })
+        .finally(() => {
+            // Reabilitar botão
+            btnGerar.disabled = false;
+            btnGerar.innerHTML = '<i class="fas fa-wand-magic-sparkles me-2"></i>Gerar Roteiro';
+        });
+    }
+
+    // ✅ MOSTRAR RESULTADO
+    function mostrarResultado(data) {
+        const roteiro = data.roteiro;
+        const resultadoConteudo = document.getElementById('resultado-conteudo');
+        
+        resultadoConteudo.innerHTML = `
+            <div class="mb-3">
+                <strong>Título:</strong>
+                <p class="mb-0 text-dark">${roteiro.titulo || 'N/A'}</p>
+            </div>
+            <div class="mb-3">
+                <strong>Descrição:</strong>
+                <p class="mb-0 text-dark">${roteiro.descricao || 'N/A'}</p>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Tipo:</strong>
+                    <p class="mb-0">${roteiro.tipo_video === 'short' ? '🎬 Short' : '🎥 Long'}</p>
+                </div>
+                <div class="col-md-6">
+                    <strong>Resolução:</strong>
+                    <p class="mb-0">${roteiro.resolucao || 'N/A'}</p>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Palavras geradas:</strong>
+                    <p class="mb-0 fw-bold text-success">${roteiro.palavras_geradas || 'N/A'}</p>
+                </div>
+                <div class="col-md-6">
+                    <strong>Duração estimada:</strong>
+                    <p class="mb-0 fw-bold text-primary">${roteiro.duracao_estimada || 'N/A'} minutos</p>
+                </div>
+            </div>
+            <div class="mt-3 p-3 bg-light rounded">
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>ID do Roteiro:</strong><br>
+                        <code>${roteiro.id_video}</code>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>ID no Banco:</strong><br>
+                        <code>${roteiro.id}</code>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Configurar link para ver roteiro
+        document.getElementById('btn-ver-roteiro').href = `/videos/${roteiro.id}`;
+        
+        // Mostrar modal
+        const modal = new bootstrap.Modal(document.getElementById('modalResultado'));
+        modal.show();
+    }
+
+    // ✅ EVENT LISTENERS
+    canalSelect.addEventListener('change', function() {
+        const canal = this.value;
+        if (canal) {
+            carregarTemas(canal);
+            carregarConfigCanal();
+        } else {
+            temasContainer.innerHTML = `
+                <div class="text-muted text-center py-3">
+                    <i class="fas fa-folder-open me-2"></i>
+                    Selecione um canal para ver os temas disponíveis
+                </div>
+            `;
+            previewContainer.innerHTML = `
+                <div class="text-center text-muted">
+                    <i class="fas fa-calculator fa-2x mb-2"></i>
+                    <p>Selecione um canal</p>
+                </div>
+            `;
+        }
+    });
+
+    tipoVideoSelect.addEventListener('change', function() {
+        carregarConfigCanal();
+        calcularPalavras();
+    });
+
+    duracaoInput.addEventListener('input', calcularPalavras);
+    btnDuracaoPadrao.addEventListener('click', aplicarDuracaoPadrao);
+
+    // Botão tema aleatório
+    btnTemaAleatorio.addEventListener('click', function() {
+        const temas = Array.from(temasContainer.querySelectorAll('.tema-item'));
+        if (temas.length > 0) {
+            const temaAleatorio = temas[Math.floor(Math.random() * temas.length)];
+            const temaTexto = temaAleatorio.querySelector('small').textContent;
+            temaInput.value = temaTexto;
+            selecionarTema(temaAleatorio, temaTexto);
+        } else {
+            alert('Nenhum tema disponível. Selecione um canal primeiro.');
+        }
+    });
+
+    // Submissão do formulário
+    formRoteiro.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = {
+            canal: canalSelect.value,
+            tema: temaInput.value,
+            tipo_video: tipoVideoSelect.value,
+            provider: document.getElementById('provider').value,
+            duracao: duracaoInput.value ? parseFloat(duracaoInput.value) : null
+        };
+
+        // Validação básica
+        if (!formData.canal) {
+            alert('Por favor, selecione um canal.');
+            return;
+        }
+
+        gerarRoteiro(formData);
+    });
+
+    // ✅ INICIALIZAÇÃO
+    aplicarDuracaoPadrao();
+    atualizarPreview();
+});
+</script>
+
+<style>
+.tema-item {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid #dee2e6;
+}
+
+.tema-item:hover {
+    background-color: #f8f9fa !important;
+    border-color: #0d6efd !important;
+    transform: translateY(-1px);
+}
+
+.tema-item.border-primary {
+    border-width: 2px !important;
+    background-color: #e7f1ff !important;
+}
+
+.bg-primary-light {
+    background-color: #e7f1ff !important;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+#info-palavras {
+    font-weight: 500;
+}
+
+.input-group .btn {
+    border-left: 1px solid #dee2e6;
+}
+
+/* Melhorar a scrollbar dos temas */
+#temas-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+#temas-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+#temas-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+#temas-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+</style>
+{% endblock %}

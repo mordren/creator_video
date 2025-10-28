@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Início - Sistema de Vídeos{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 text-center mb-5">
+        <h1 class="display-4">🎬 Sistema de Vídeos</h1>
+        <p class="lead">Gerencie e crie vídeos automaticamente</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-list fa-3x text-primary mb-3"></i>
+                <h5 class="card-title">Gerenciar Vídeos</h5>
+                <p class="card-text">Visualize, edite e gerencie todos os seus vídeos em um só lugar.</p>
+                <a href="{{ url_for('list_videos') }}" class="btn btn-primary">Ver Vídeos</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-music fa-3x text-success mb-3"></i>
+                <h5 class="card-title">Gerar Áudio</h5>
+                <p class="card-text">Crie áudio automaticamente usando sistemas TTS avançados.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-film fa-3x text-info mb-3"></i>
+                <h5 class="card-title">Gerar Vídeos</h5>
+                <p class="card-text">Renderize vídeos completos com templates personalizados.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Status do Sistema</h5>
+                <div id="status"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Verificar status do sistema
+    axios.get('/api/status')
+        .then(response => {
+            const status = response.data;
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `
+                <p><strong>Banco de Dados:</strong> 
+                    <span class="badge ${status.database === 'connected' ? 'bg-success' : 'bg-danger'}">
+                        ${status.database === 'connected' ? '✅ Conectado' : '❌ Desconectado'}
+                    </span>
+                </p>
+                <p><strong>Última verificação:</strong> ${new Date(status.timestamp).toLocaleString()}</p>
+            `;
+        })
+        .catch(error => {
+            document.getElementById('status').innerHTML = 
+                '<p class="text-danger">❌ Erro ao verificar status do sistema</p>';
+        });
+});
+</script>
+{% endblock %}

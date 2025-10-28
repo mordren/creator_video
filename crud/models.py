@@ -107,12 +107,16 @@ class VideoTikTok(SQLModel, table=True):
 
 class Agendamento(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    canal: str
-    plataforma: str
-    dia_da_semana: int  # 0-6 (domingo=0, sábado=6)
-    hora: str  # formato 'HH:MM'
-    tipo_video: str  # 'short' ou 'long'
-    ativo: bool = True
+    video_id: int = Field(foreign_key="roteiro.id")
+    plataformas: str  # JSON string para armazenar múltiplas plataformas
+    data_publicacao: str  # YYYY-MM-DD
+    hora_publicacao: str  # HH:MM
+    recorrente: bool = Field(default=False)
+    status: str = Field(default="agendado")  # agendado, publicado, cancelado
+    
+    # Campos de auditoria
+    data_criacao: datetime = Field(default_factory=datetime.utcnow)
+    data_atualizacao: datetime = Field(default_factory=datetime.utcnow)
 
 class AgendamentoExecutado(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

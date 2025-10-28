@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}Vídeos - Sistema de Vídeos{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-video me-2"></i>Gerenciar Vídeos</h1>
+    <div class="btn-group">
+        <a href="{{ url_for('list_videos') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-sync-alt"></i> Atualizar
+        </a>
+    </div>
+</div>
+
+<!-- Estatísticas -->
+{% if stats %}
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">{{ stats.total }}</h5>
+                <p class="card-text">Total de Vídeos</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-success">{{ stats.com_audio }}</h5>
+                <p class="card-text">Com Áudio</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-info">{{ stats.com_video }}</h5>
+                <p class="card-text">Com Vídeo</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-warning">{{ stats.finalizados }}</h5>
+                <p class="card-text">Finalizados</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Filtros e Busca -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="filter" class="form-label">Filtrar por:</label>
+                <select class="form-select" id="filter" name="filter">
+                    <option value="all" {% if filter_type=='all' %}selected{% endif %}>Todos os Vídeos</option>
+                    <option value="audio" {% if filter_type=='audio' %}selected{% endif %}>Com Áudio</option>
+                    <option value="video" {% if filter_type=='video' %}selected{% endif %}>Com Vídeo</option>
+                    <option value="finalized" {% if filter_type=='finalized' %}selected{% endif %}>Finalizados</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label for="search" class="form-label">Buscar:</label>
+                <input type="text" class="form-control" id="search" name="search" 
+                       value="{{ search }}" placeholder="Buscar por título, descrição ou tags...">
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search"></i> Buscar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Lista de Vídeos -->
+<div class="card">
+    <div class="card-body">
+        {% if videos %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Título</th>
+                        <th>Canal</th>
+                        <th>Áudio</th>
+                        <th>Vídeo</th>
+                        <th>Data</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for video in videos %}
+                    <tr>
+                        <td><strong>#{{ video.id }}</strong></td>
+                        <td>
+                            <a href="{{ url_for('video_detail', video_id=video.id) }}" class="text-decoration-none">
+                                {{ video.titulo }}
+                            </a>
+                            {% if video.finalizado %}
+                                <span class="badge bg-success ms-1">Finalizado</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ video.canal_nome }}</td>
+                        <td>
+                            {% if video.audio_gerado %}
+                                <span class="badge bg-success"><i class="fas fa-check"></i> Sim</span>
+                            {% else %}
+                                <span class="badge bg-danger"><i class="fas fa-times"></i> Não</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if video.video_gerado %}
+                                <span class="badge bg-success"><i class="fas fa-check"></i> Sim</span>
+                            {% else %}
+                                <span class="badge bg-danger"><i class="fas fa-times"></i> Não</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if video.data_criacao %}
+                                {{ video.data_criacao[:10] }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('video_detail', video_id=video.id) }}" 
+                                   class="btn btn-outline-primary" title="Ver detalhes">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if not video.audio_gerado %}
+                                <button class="btn btn-outline-warning generate-audio" 
+                                        data-video-id="{{ video.id }}" title="Gerar Áudio">
+                                    <i class="fas fa-music"></i>
+                                </button>
+                                {% endif %}
+                                {% if video.audio_gerado and not video.video_gerado %}
+                                <button class="btn btn-outline-info generate-video" 
+                                        data-video-id="{{ video.id }}" title="Gerar Vídeo">
+                                    <i class="fas fa-film"></i>
+                                </button>
+                                {% endif %}
+                                <button class="btn btn-outline-danger delete-video" 
+                                        data-video-id="{{ video.id }}" title="Excluir">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-video-slash fa-3x text-muted mb-3"></i>
+            <h4>Nenhum vídeo encontrado</h4>
+            <p class="text-muted">
+                {% if search or filter_type != 'all' %}
+                    Tente ajustar os filtros de busca.
+                {% else %}
+                    Ainda não há vídeos cadastrados no sistema.
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gerar Áudio
+    document.querySelectorAll('.generate-audio').forEach(button => {
+        button.addEventListener('click', function() {
+            const videoId = this.getAttribute('data-video-id');
+            if (confirm('Deseja gerar o áudio para este vídeo?')) {
+                axios.post(`/api/videos/${videoId}/generate-audio`)
+                    .then(response => {
+                        alert(response.data.message);
+                        location.reload();
+                    })
+                    .catch(error => {
+                        alert('Erro: ' + (error.response?.data?.message || error.message));
+                    });
+            }
+        });
+    });
+
+    // Gerar Vídeo
+    document.querySelectorAll('.generate-video').forEach(button => {
+        button.addEventListener('click', function() {
+            const videoId = this.getAttribute('data-video-id');
+            if (confirm('Deseja gerar o vídeo para este roteiro?')) {
+                axios.post(`/api/videos/${videoId}/generate-video`)
+                    .then(response => {
+                        alert(response.data.message);
+                        location.reload();
+                    })
+                    .catch(error => {
+                        alert('Erro: ' + (error.response?.data?.message || error.message));
+                    });
+            }
+        });
+    });
+
+    // Excluir Vídeo
+    document.querySelectorAll('.delete-video').forEach(button => {
+        button.addEventListener('click', function() {
+            const videoId = this.getAttribute('data-video-id');
+            if (confirm('Tem certeza que deseja excluir este vídeo? Esta ação não pode ser desfeita.')) {
+                axios.delete(`/api/videos/${videoId}/delete`)
+                    .then(response => {
+                        alert(response.data.message);
+                        location.reload();
+                    })
+                    .catch(error => {
+                        alert('Erro: ' + (error.response?.data?.message || error.message));
+                    });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

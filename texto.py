@@ -1,3 +1,5 @@
+# texto.py - MODIFICAÇÕES PARA CONTROLE DE TEMPO E PALAVRAS
+
 #!/usr/bin/env python3
 import argparse
 import json
@@ -17,6 +19,9 @@ logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
 logging.getLogger('sqlalchemy.pool').setLevel(logging.WARNING)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Silencia logs do TensorFlow se houver
 logging.basicConfig(level=logging.ERROR, format='%(message)s')
+
+# ✅ NOVO: Constante para palavras por minuto (ajustável)
+PALAVRAS_POR_MINUTO = 140  # Taxa média de fala em português
 
 try:
     from read_config import carregar_config_canal
@@ -97,8 +102,9 @@ class TextGenerator:
         return True
 
     def carregar_agente(self, config: Dict[str, Any], linha_tema: str = None, 
-                        schema: Dict[str, Any] = None, tipo_video: str = 'short') -> str:
-        """Carrega e personaliza o template do agente"""
+                        schema: Dict[str, Any] = None, tipo_video: str = 'short',
+                        duracao_personalizada: int = None) -> str:
+        """Carrega e personaliza o template do agente - ✅ MODIFICADO para aceitar duração personalizada"""
         try:
             pasta_canal = config['PASTA_CANAL']
             agente_file = pasta_canal / config.get('AGENTE_FILE', 'agente.txt')
@@ -137,20 +143,27 @@ class TextGenerator:
             with open(schema_file, 'r', encoding='utf-8') as f:
                 schema_data = json.load(f)
             
-            # ✅ NOVO: Determina tamanho máximo baseado no tipo de vídeo
-            if tipo_video == 'short':
-                tamanho_max = config.get('TAMANHO_MAX_SHORT', 130)
-                duracao_minutos = config.get('DURACAO_MIN_SHORT', 1)
-            else:  # long
-                tamanho_max = config.get('TAMANHO_MAX_LONG', 130)
-                duracao_minutos = config.get('DURACAO_MIN_LONG', 3)
+            # ✅ MODIFICADO: Calcula tamanho baseado na duração personalizada ou usa padrão
+            if duracao_personalizada:
+                duracao_minutos = duracao_personalizada
+                # ✅ NOVO: Calcula palavras baseado na duração
+                tamanho_max = int(duracao_minutos * PALAVRAS_POR_MINUTO)
+                print(f"🎯 Duração personalizada: {duracao_minutos} minutos -> {tamanho_max} palavras")
+            else:
+                # Comportamento original
+                if tipo_video == 'short':
+                    tamanho_max = config.get('TAMANHO_MAX_SHORT', 130)
+                    duracao_minutos = config.get('DURACAO_MIN_SHORT', 1)
+                else:  # long
+                    tamanho_max = config.get('TAMANHO_MAX_LONG', 130)
+                    duracao_minutos = config.get('DURACAO_MIN_LONG', 3)
             
             # ✅ PREPARA TODAS AS SUBSTITUIÇÕES
             substituicoes = {
                 '{tema}': tema,
                 '{autor}': autor,
-                '{TAMANHO_MAX}': str(tamanho_max),  # ✅ NOVO: usa valor dinâmico
-                '{DURACAO_MINUTOS}': str(duracao_minutos),  # ✅ NOVO: usa valor dinâmico
+                '{TAMANHO_MAX}': str(tamanho_max),
+                '{DURACAO_MINUTOS}': str(duracao_minutos),
                 '{campos_obrigatorios}': str(schema_data.get('campos_obrigatorios', [])),
                 '{exemplo_resposta}': schema_data.get('exemplo_resposta', '')
             }
@@ -216,7 +229,6 @@ class TextGenerator:
                 "type": "object",
                 "properties": properties,
                 "required": campos_obrigatorios
-                # ❌ REMOVIDO: "additionalProperties": False
             }
             
             print(f"🎯 JSON Schema gerado para {len(properties)} campos: {list(properties.keys())}")
@@ -236,29 +248,39 @@ class TextGenerator:
             }
 
     def gerar_roteiro(self, canal: str, linha_tema: Optional[str] = None, 
-                     provider: Optional[str] = None, tipo_video: str = 'short') -> Dict[str, Any]:
-        """Gera um roteiro completo usando JSON Schema dinâmico"""
+                     provider: Optional[str] = None, tipo_video: str = 'short',
+                     duracao_minutos: Optional[int] = None) -> Dict[str, Any]:
+        """Gera um roteiro completo usando JSON Schema dinâmico - ✅ MODIFICADO para aceitar duração personalizada"""
         try:
             # Carrega configuração do canal
             config = carregar_config_canal(canal)
             schema_canal = self.carregar_schema(config)
             
-            # ✅ NOVO: Determina tamanho máximo e resolução baseada no tipo de vídeo
+            # ✅ MODIFICADO: Determina tamanho máximo e resolução baseada no tipo de vídeo E duração personalizada
+            if duracao_minutos:
+                # ✅ NOVO: Calcula palavras baseado na duração solicitada
+                tamanho_texto = int(duracao_minutos * PALAVRAS_POR_MINUTO)
+                print(f"🎯 Gerando roteiro com duração personalizada: {duracao_minutos} minutos")
+                print(f"   📏 Tamanho calculado: {tamanho_texto} palavras ({PALAVRAS_POR_MINUTO} palavras/minuto)")
+            else:
+                # Comportamento original
+                if tipo_video == 'short':
+                    tamanho_texto = config.get('TAMANHO_MAX_SHORT', 130)
+                    print(f"🎯 Gerando roteiro para SHORT")
+                else:  # long
+                    tamanho_texto = config.get('TAMANHO_MAX_LONG', 130)
+                    print(f"🎯 Gerando roteiro para LONG")
+                print(f"   📏 Tamanho: {tamanho_texto} palavras")
+            
+            # Determina resolução (não muda com a duração)
             if tipo_video == 'short':
-                tamanho_texto = config.get('TAMANHO_MAX_SHORT', 130)
                 resolucao = config.get('RESOLUCAO_SHORT', '720x1280')
-                print(f"🎯 Gerando roteiro para SHORT")
-                print(f"   📏 Tamanho: {tamanho_texto} palavras")
-                print(f"   📐 Resolução: {resolucao}")
-            else:  # long
-                tamanho_texto = config.get('TAMANHO_MAX_LONG', 130)
+            else:
                 resolucao = config.get('RESOLUCAO_LONG', '1280x720')
-                print(f"🎯 Gerando roteiro para LONG") 
-                print(f"   📏 Tamanho: {tamanho_texto} palavras")
-                print(f"   📐 Resolução: {resolucao}")
+            print(f"   📐 Resolução: {resolucao}")
 
-            # Carrega e personaliza prompt do agente - ✅ NOVO: passa tipo_video
-            prompt = self.carregar_agente(config, linha_tema, schema_canal, tipo_video)
+            # Carrega e personaliza prompt do agente - ✅ MODIFICADO: passa duração personalizada
+            prompt = self.carregar_agente(config, linha_tema, schema_canal, tipo_video, duracao_minutos)
 
             # Cria provider
             provider_name = provider or config.get('TEXT_PROVIDER', 'gemini_text')
@@ -289,25 +311,26 @@ class TextGenerator:
             attempts = 0
             
             while not faixa[0] <= count_words(dados_json.get('texto', '')) <= faixa[1] and attempts < 6:
-                print('tamanho:' + str(count_words(dados_json.get('texto'))))
-                print('Refazendo')
+                print(f'📊 Tamanho atual: {count_words(dados_json.get("texto", ""))} palavras')
+                print('🔄 Refazendo ajuste de tamanho...')
                 atual = count_words(dados_json.get('texto', ''))
 
                 if atual < faixa[0]:
                     deficit = faixa[0] - atual
-                    print(f"Refazendo (faltam ~{deficit} palavras)")
+                    print(f"📈 Expandindo (faltam ~{deficit} palavras)")
                     expand_prompt = (
                         "You previously returned this JSON.\n"
                         "Now EXPAND only the field 'texto' to reach a total length close to "
                         f"{tamanho_texto} words (acceptable range {faixa[0]}–{faixa[1]} words). "
-                        f"Add about {abs(deficit)} more words by deepening reflection, repetition cadence, and gentle transitions. "
-                        "Do NOT change tone, structure, or metadata. Return the FULL JSON again.\n\n"
+                        f"Add about {abs(deficit)} more words by deepening reflection, adding examples, "
+                        "and gentle transitions. Do NOT change tone, structure, or metadata. "
+                        "Return the FULL JSON again.\n\n"
                         + json.dumps(dados_json, ensure_ascii=False, indent=2)
                     )
 
                 elif atual > faixa[1]:
                     excesso = atual - faixa[1]
-                    print(f"Reduzindo (excesso de ~{excesso} palavras)")
+                    print(f"📉 Reduzindo (excesso de ~{excesso} palavras)")
                     expand_prompt = (
                         "You previously returned this JSON.\n"
                         "Now REDUCE only the field 'texto' to stay near "
@@ -332,23 +355,28 @@ class TextGenerator:
                     
                 attempts += 1
 
-                
             # ✅ CORREÇÃO: Valida contra o schema
             if not self.validar_json_contra_schema(dados_json, schema_canal):
                 print("❌ JSON não atende ao schema - parando execução")
                 return None
             
+            # ✅ NOVO: Calcula duração estimada final
+            palavras_finais = count_words(dados_json.get('texto', ''))
+            duracao_estimada = palavras_finais / PALAVRAS_POR_MINUTO
             
-            # Adiciona metadados - ✅ NOVO: inclui tipo_video e resolução
+            # Adiciona metadados - ✅ MODIFICADO: inclui duração estimada
             dados_json.update({
                 'canal': canal,
                 'linha_tema': linha_tema or "aleatório",
                 'provider': provider_name,
                 'modelo': config.get('MODEL_NAME', 'N/A'),
-                'tipo_video': tipo_video,  # ✅ NOVO
-                'resolucao': resolucao     # ✅ NOVO: resolução dinâmica
+                'tipo_video': tipo_video,
+                'resolucao': resolucao,
+                'palavras_geradas': palavras_finais,  # ✅ NOVO
+                'duracao_estimada_minutos': round(duracao_estimada, 1)  # ✅ NOVO
             })
             
+            print(f"✅ Roteiro finalizado: {palavras_finais} palavras (~{duracao_estimada:.1f} minutos)")
             return dados_json
             
         except Exception as e:
@@ -386,7 +414,7 @@ class TextGenerator:
                 tags=', '.join(dados.get('tags', [])),
                 thumb=dados.get('thumb', 'thumb_temporaria'),
                 canal_id=canal.id,
-                resolucao=resolucao  # ✅ NOVO: usa resolução dinâmica
+                resolucao=resolucao
             )
             
             # Salva no banco
@@ -430,7 +458,7 @@ class TextGenerator:
         with open(caminho_txt, 'w', encoding='utf-8') as f:
             f.write(texto_pt)
         
-        # Salva no banco de dados - ✅ NOVO: passa tipo_video
+        # Salva no banco de dados
         resultado_db = self._salvar_no_banco(dados, config, tipo_video)
         
         return {
@@ -449,14 +477,16 @@ def main():
     parser.add_argument('tipo_video', choices=['short', 'long'], default='short', 
                        help='Tipo de vídeo a ser gerado (short ou long)')
     parser.add_argument('--provider', help='Provedor de IA (gemini, grok, claude)')
+    # ✅ NOVO: Argumento para duração personalizada
+    parser.add_argument('--duracao', type=int, help='Duração desejada do vídeo em minutos (sobrescreve configuração padrão)')
     
     args = parser.parse_args()
     
     try:
         generator = TextGenerator()
         
-        # Gera roteiro (com tema aleatório se não especificado) - ✅ NOVO: passa tipo_video
-        roteiro = generator.gerar_roteiro(args.canal, args.linha_tema, args.provider, args.tipo_video)
+        # Gera roteiro (com tema aleatório se não especificado) - ✅ MODIFICADO: passa duração personalizada
+        roteiro = generator.gerar_roteiro(args.canal, args.linha_tema, args.provider, args.tipo_video, args.duracao)
         
         if not roteiro:
             print("❌ Falha na geração do roteiro")
@@ -468,8 +498,11 @@ def main():
         print(f"🏷️ Tags: {', '.join(roteiro.get('tags', []))}")
         print(f"🎯 Tipo: {roteiro.get('tipo_video', 'N/A')}")
         print(f"📐 Resolução: {roteiro.get('resolucao', 'N/A')}")
+        # ✅ NOVO: Mostra informações de duração
+        print(f"📊 Palavras: {roteiro.get('palavras_geradas', 'N/A')}")
+        print(f"⏱️ Duração estimada: {roteiro.get('duracao_estimada_minutos', 'N/A')} minutos")
         
-        # Salva o roteiro - ✅ NOVO: passa tipo_video
+        # Salva o roteiro
         config = carregar_config_canal(args.canal)
         resultado_salvo = generator.salvar_roteiro_completo(roteiro, config, args.tipo_video)
 

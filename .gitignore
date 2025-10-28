@@ -9,6 +9,8 @@ venv/
 env/
 ENV/
 
+models/
+
 # IDE
 .vscode/
 .idea/
@@ -55,3 +57,4 @@ conteudo_gerado/
 .cache/
 
 .env
+

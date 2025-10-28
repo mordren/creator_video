@@ -10,6 +10,8 @@ env/
 ENV/
 
 models/
+assets/
+
 
 # IDE
 .vscode/

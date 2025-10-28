@@ -44,6 +44,7 @@ config_local.py
 output/
 gerados/
 conteudo_gerado/
+renders/
 
 # Arquivos temporários
 *.tmp

@@ -181,9 +181,7 @@ class VideoGenerator:
             success = self.video_manager.salvar_info_video(
                 roteiro_id=roteiro_id,
                 arquivo_video=arquivo_video,
-                duracao=duracao,
-                titulo=roteiro.titulo if roteiro else None,
-                thumb=roteiro.thumb if roteiro else None,                
+                duracao=duracao,                              
             )
             print("💾 Banco atualizado com informações do vídeo" if success else "⚠️ Falha ao atualizar informações do vídeo")
             return success

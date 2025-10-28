@@ -1,3 +1,5 @@
+# audio.py (apenas shorts terão otimização de áudio)
+
 #!/usr/bin/env python3
 import json
 import sys
@@ -15,6 +17,8 @@ try:
     from crud.roteiro_manager import RoteiroManager
     from crud.video_manager import VideoManager
     from crud.canal_manager import CanalManager
+    # ✅ NOVA IMPORTAÇÃO
+    from utils import otimizar_audio_e_legenda, vertical_horizontal
 except ImportError as e:
     print(f"❌ Erro de importação: {e}")
     sys.exit(1)
@@ -84,24 +88,61 @@ class AudioSystem:
         tts = create_tts_provider(provider)
         success = tts.sintetizar(text, audio_file, config)
         
-        # Mixar com música de fundo, se disponível
-        mixado = audio_file
+        # ✅ MODIFICADO: Otimizar áudio APENAS para shorts (vídeos verticais)
+        srt_file = None
+        if provider == "edge" and config.get('EDGE_TTS_LEGENDAS', False):
+            srt_file = Path(audio_file).with_suffix('.srt')
+        
+        # Verifica se é short (vertical) antes de otimizar
+        resolucao = data.get('resolucao', config.get('RESOLUCAO', '1920x1080'))
+        is_short = (vertical_horizontal(resolucao) == "vertical")
+        
+        if success and audio_file.exists() and is_short:
+            print("🎵 Otimizando áudio para short (cortando pausas longas)...")
+            audio_otimizado, srt_ajustado = otimizar_audio_e_legenda(str(audio_file), str(srt_file) if srt_file else None)
+            
+            # Usa o áudio otimizado se foi criado
+            if audio_otimizado != str(audio_file):
+                audio_file = Path(audio_otimizado)
+                if srt_ajustado:
+                    srt_file = Path(srt_ajustado)
+        elif success and audio_file.exists() and not is_short:
+            print("ℹ️  Otimização de áudio skipped (não é short)")
+        
+        # ✅ CORRIGIDO: Mixar com música de fundo com nome correto
+        arquivo_mixado = pasta_video / f"{roteiro.id_video}_com_musica.mp3"
         musica_path = config.get('MUSICA')
+        
         if musica_path and Path(musica_path).exists():
             print("🎵 Mixando áudio com música...")
-            mixado = mixar_audio_com_musica(audio_file, musica_path)
+            
+            # Se já existe um arquivo mixado, remove antes de criar novo
+            if arquivo_mixado.exists():
+                arquivo_mixado.unlink()
+                
+            # Chama a função de mixagem
+            mixado_temp = mixar_audio_com_musica(audio_file, musica_path)
+            
+            # ✅ CORREÇÃO: Renomeia para o nome padrão se necessário
+            if mixado_temp != str(arquivo_mixado):
+                Path(mixado_temp).rename(arquivo_mixado)
+                print(f"✅ Áudio mixado renomeado para: {arquivo_mixado}")
+            else:
+                print(f"✅ Áudio mixado: {arquivo_mixado}")
         else:
             print("ℹ️  Nenhuma música configurada ou arquivo não encontrado")
+            arquivo_mixado = audio_file
 
         if success and audio_file.exists():
-            self._update_apos_audio_sucesso(roteiro, data, str(audio_file), str(mixado), provider, config, arquivo_json)
-            print(f"✅ Áudio gerado: {audio_file}")
+            self._update_apos_audio_sucesso(roteiro, data, str(audio_file), str(arquivo_mixado), provider, config, arquivo_json, srt_file, is_short)
+            print(f"✅ Áudio gerado{' e otimizado' if is_short else ''}: {audio_file}")
+            print(f"✅ Áudio mixado: {arquivo_mixado}")
             return True
         
         print("❌ Falha na geração")
         return False
 
-    def _update_apos_audio_sucesso(self, roteiro, data: dict, audio_file: str, mixado: str, provider: str, config: dict, arquivo_json: Path):
+    def _update_apos_audio_sucesso(self, roteiro, data: dict, audio_file: str, mixado: str, provider: str, config: dict, arquivo_json: Path, srt_file: Path = None, is_short: bool = False):
         """Atualiza APENAS se o áudio foi gerado com sucesso"""
         
         # Obtém a voz TTS baseada no provider
@@ -113,13 +154,16 @@ class AudioSystem:
         else:
             voz_tts = f"{provider}_voice"
         
-        # ✅ VERIFICA SE EXISTE ARQUIVO .SRT (apenas para Edge TTS com legendas habilitadas)
+        # ✅ ATUALIZADO: Usa SRT ajustado se disponível (apenas para shorts)
         arquivo_legenda = None
-        if provider == "edge" and config.get('EDGE_TTS_LEGENDAS', False):
+        if srt_file and srt_file.exists():
+            arquivo_legenda = str(srt_file)
+            print(f"📝 Legenda SRT {'otimizada' if is_short else 'original'}: {srt_file}")
+        elif provider == "edge" and config.get('EDGE_TTS_LEGENDAS', False):
             srt_path = Path(audio_file).with_suffix('.srt')
             if srt_path.exists():
                 arquivo_legenda = str(srt_path)
-                print(f"📝 Legenda SRT encontrada: {srt_path}")
+                print(f"📝 Legenda SRT original: {srt_path}")
 
         # Atualiza JSON
         data.update({
@@ -127,7 +171,8 @@ class AudioSystem:
             'arquivo_audio': audio_file,
             'tts_provider': provider,
             'voz_tts': voz_tts,
-            'arquivo_legenda': arquivo_legenda
+            'arquivo_legenda': arquivo_legenda,
+            'audio_otimizado': is_short  # ✅ NOVO: indica se foi otimizado
         })
         
         with open(arquivo_json, 'w', encoding='utf-8') as f:
@@ -135,7 +180,6 @@ class AudioSystem:
         
         print("📁 Arquivo JSON atualizado")
         
-        # ✅ ATUALIZAÇÃO DO BANCO
         try:
             print(f"🔄 Atualizando roteiro: {roteiro.id}")
             

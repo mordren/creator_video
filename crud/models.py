@@ -1,6 +1,6 @@
 from sqlmodel import SQLModel, Field, Relationship, select
 from typing import Optional, List
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
 from sqlalchemy import Text
 
@@ -52,9 +52,7 @@ class Video(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     roteiro_id: int = Field(foreign_key="roteiro.id", unique=True)
     
-    # Metadados do vídeo
-    titulo: Optional[str] = Field(default=None, sa_type=Text)
-    thumb: Optional[str] = Field(default=None, sa_type=Text)
+    # Metadados do vídeo    
     arquivo_audio: Optional[str] = Field(default=None, sa_type=Text)
     arquivo_legenda: Optional[str] = Field(default=None, sa_type=Text)
     arquivo_video: Optional[str] = Field(default=None, sa_type=Text)
@@ -106,3 +104,20 @@ class VideoTikTok(SQLModel, table=True):
     likes: int = Field(default=0)
     
     video: Video = Relationship(back_populates="tiktok")
+
+class Agendamento(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    canal: str
+    plataforma: str
+    dia_da_semana: int  # 0-6 (domingo=0, sábado=6)
+    hora: str  # formato 'HH:MM'
+    tipo_video: str  # 'short' ou 'long'
+    ativo: bool = True
+
+class AgendamentoExecutado(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    agendamento_id: int = Field(foreign_key="agendamento.id")
+    data_execucao: Optional[datetime] = Field(default=None)  # data em que foi executado
+    roteiro_id: int = Field(foreign_key="roteiro.id")
+    sucesso: bool = True
+    data_criacao: datetime = Field(default_factory=datetime.now)

@@ -1,7 +1,9 @@
-# utils.py
 from pathlib import Path
 import json, re
 from typing import Any, Dict
+import subprocess
+import tempfile  # ✅ ADICIONAR ESTA LINHA
+import os
 
 # tokenização de "palavra" robusta (acentos + hífen/contração)
 _WORD = re.compile(r"[A-Za-zÀ-ÖØ-öø-ÿ0-9]+(?:[-''][A-Za-zÀ-ÖØ-öø-ÿ0-9]+)?", re.UNICODE)
@@ -53,39 +55,17 @@ def save_json(dados: Dict[str, Any], out_dir: Path) -> Path:
     return path
 
 def criar_pasta_roteiro(pasta_base: Path, id_video: str) -> Path:
-    """
-    Cria pasta para o roteiro baseado no ID do vídeo
-    
-    Args:
-        pasta_base: Pasta base dos vídeos (ex: E:\Canal Dark\Vídeos Automáticos)
-        id_video: ID único do vídeo
-    
-    Returns:
-        Path: Caminho da pasta criada
-    """
     pasta_roteiro = pasta_base / id_video
     pasta_roteiro.mkdir(parents=True, exist_ok=True)
     return pasta_roteiro
 
 def save_json_completo(dados: dict, pasta_roteiro: Path):
-    """
-    Salva arquivos JSON e TXT do roteiro na pasta especificada
-    
-    Args:
-        dados: Dados do roteiro
-        pasta_roteiro: Pasta onde salvar os arquivos
-    
-    Returns:
-        tuple: (caminho_json, caminho_txt)
-    """
     id_video = dados["id_video"]
     
-    # Salva JSON com metadados
     caminho_json = pasta_roteiro / f"{id_video}.json"
     with open(caminho_json, 'w', encoding='utf-8') as f:
         json.dump(dados, f, ensure_ascii=False, indent=2)
     
-    # Salva texto em arquivo .txt
     caminho_txt = pasta_roteiro / f"{id_video}.txt"
     texto_pt = dados.get("texto_pt", dados.get("texto", ""))
     with open(caminho_txt, 'w', encoding='utf-8') as f:
@@ -114,19 +94,12 @@ def vertical_horizontal(resolucao: str) -> str:
     return "vertical" if resolucao == "720x1280" else "horizontal"
 
 def clean_json_response(text: str) -> Dict[str, Any]:
-    """
-    Limpa e extrai JSON da resposta do modelo (robusto para Gemini, Grok, etc.)
-    Versão standalone da função que estava no gemini_text.py
-    """
     import ast
     
-    # Remove blocos ```json e ``` simples
     text = re.sub(r"^```(?:json)?", "", text.strip(), flags=re.IGNORECASE)
     text = re.sub(r"```$", "", text)
     text = re.sub(r"[\x00-\x1f\x7f]", "", text)  # remove caracteres de controle
     text = text.strip()
-
-    # PRÉ-PROCESSAMENTO: Corrige escapes problemáticos
     text = re.sub(r"(?<!\\)\\'", "'", text)
     text = re.sub(r'(?<![\\"])"(?![\\"])', '"', text)
     text = text.replace('\\\\', '\\')
@@ -314,6 +287,202 @@ def ajustar_timestamps_srt(arquivo_entrada: str, arquivo_saida: str = None) -> s
     
     return arquivo_saida
 
+
+def srt_to_seconds(timestamp):
+    """Converte timestamp SRT para segundos"""
+    time_part, ms = timestamp.split(',')
+    h, m, s = time_part.split(':')
+    return int(h) * 3600 + int(m) * 60 + int(s) + int(ms) / 1000
+
+def seconds_to_srt(seconds):
+    """Converte segundos para formato SRT"""
+    h = int(seconds // 3600)
+    m = int((seconds % 3600) // 60)
+    s = int(seconds % 60)
+    ms = int((seconds - int(seconds)) * 1000)
+    return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+
+def ajustar_legenda_srt(srt_original, srt_ajustado, cortes):
+    """Ajusta timestamps do SRT baseado nos cortes aplicados - VERSÃO CORRIGIDA"""
+    try:
+        with open(srt_original, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Processa cada bloco de legenda
+        blocks = content.strip().split('\n\n')
+        output_blocks = []
+        
+        for block in blocks:
+            lines = block.split('\n')
+            if len(lines) >= 3:
+                # Linha 1: número
+                # Linha 2: timestamp
+                num_line = lines[0]
+                time_line = lines[1]
+                
+                if '-->' in time_line:
+                    start_str, end_str = time_line.split(' --> ')
+                    start_sec = srt_to_seconds(start_str)
+                    end_sec = srt_to_seconds(end_str)
+                    
+                    # ✅ CORREÇÃO: Calcula offset total acumulado de todos os cortes anteriores
+                    offset_total = 0
+                    for corte in cortes:
+                        corte_start = corte['start'] + 0.1
+                        corte_end = corte['end'] - 0.1
+                        duracao_cortada = corte_end - corte_start
+                        
+                        # Se o corte aconteceu ANTES do início desta legenda, aplica offset
+                        if corte_end < start_sec:
+                            offset_total += duracao_cortada
+                    
+                    # Aplica offset total
+                    new_start_sec = max(0, start_sec - offset_total)
+                    new_end_sec = max(0, end_sec - offset_total)
+                    
+                    # ✅ CORREÇÃO ADICIONAL: Garante que não há sobreposição entre legendas
+                    if output_blocks:
+                        # Pega o último bloco para verificar o fim da legenda anterior
+                        last_block = output_blocks[-1].split('\n')
+                        if len(last_block) >= 2 and '-->' in last_block[1]:
+                            last_end_str = last_block[1].split(' --> ')[1]
+                            last_end_sec = srt_to_seconds(last_end_str)
+                            
+                            # Se há sobreposição, ajusta o início para depois do fim da anterior
+                            if new_start_sec < last_end_sec:
+                                new_start_sec = last_end_sec + 0.001  # Pequeno gap de 1ms
+                    
+                    # Converte de volta para formato SRT
+                    new_start = seconds_to_srt(new_start_sec)
+                    new_end = seconds_to_srt(new_end_sec)
+                    
+                    new_time_line = f"{new_start} --> {new_end}"
+                    new_block = f"{num_line}\n{new_time_line}\n" + '\n'.join(lines[2:])
+                    output_blocks.append(new_block)
+        
+        # Salva arquivo ajustado
+        with open(srt_ajustado, 'w', encoding='utf-8') as f:
+            f.write('\n\n'.join(output_blocks))
+            
+        print(f"✅ Legendas ajustadas: {len(output_blocks)} blocos processados")
+        
+    except Exception as e:
+        print(f"⚠️  Erro ao ajustar legenda: {e}")
+        # Se der erro, copia o original para o ajustado
+        import shutil
+        shutil.copy2(srt_original, srt_ajustado)
+
+
+def otimizar_audio_e_legenda(audio_path: str, srt_path: str = None) -> tuple:
+    """
+    Otimiza áudio cortando pausas longas e ajusta legenda SRT correspondente
+    Retorna: (audio_otimizado_path, srt_ajustado_path)
+    """
+    try:
+        audio_file = Path(audio_path)
+        srt_file = Path(srt_path) if srt_path else None
+        
+        # Arquivos de saída
+        audio_otimizado = audio_file.parent / f"{audio_file.stem}_otimizado{audio_file.suffix}"
+        
+        # ✅ CORREÇÃO: SRT mantém o nome original, não cria "_ajustado"
+        srt_ajustado = srt_file  # Usa o mesmo arquivo original
+        
+        # 1. Detectar silêncios
+        print("🔍 Detectando pausas longas no áudio...")
+        cmd_detect = [
+            'ffmpeg',
+            '-i', str(audio_file),
+            '-af', 'silencedetect=noise=-40dB:d=0.5',
+            '-f', 'null',
+            '-'
+        ]
+        
+        result = subprocess.run(cmd_detect, capture_output=True, text=True)
+        silencios = []
+        lines = result.stderr.split('\n')
+        
+        for i, line in enumerate(lines):
+            if 'silence_start:' in line:
+                start = float(line.split('silence_start:')[1].strip())
+            elif 'silence_end:' in line and '|' in line:
+                end = float(line.split('silence_end:')[1].split('|')[0].strip())
+                duration = end - start
+                if duration > 0.5:  # Só pausas longas
+                    silencios.append({'start': start, 'end': end, 'duration': duration})
+        
+        if not silencios:
+            print("ℹ️  Nenhuma pausa longa encontrada para cortar")
+            return str(audio_file), str(srt_file) if srt_file else None
+        
+        print(f"✂️  Encontradas {len(silencios)} pausas longas para otimizar")
+        
+        # 2. Cortar áudio
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Cria arquivo de cortes para ffmpeg
+            filter_script = os.path.join(temp_dir, 'filter_script.txt')
+            with open(filter_script, 'w', encoding='utf-8') as f:
+                f.write("ffconcat version 1.0\n")
+                
+                current_pos = 0
+                for silencio in silencios:
+                    # Mantém 0.1s no início e fim da pausa
+                    corte_start = silencio['start'] + 0.1
+                    corte_end = silencio['end'] - 0.1
+                    
+                    if current_pos < corte_start:
+                        f.write(f"file '{audio_file}'\n")
+                        f.write(f"inpoint {current_pos}\n")
+                        f.write(f"outpoint {corte_start}\n")
+                    
+                    current_pos = corte_end
+                
+                # Último segmento
+                f.write(f"file '{audio_file}'\n")
+                f.write(f"inpoint {current_pos}\n")
+            
+            # Aplica cortes
+            cmd_cortar = [
+                'ffmpeg',
+                '-f', 'concat',
+                '-safe', '0',
+                '-i', filter_script,
+                '-c', 'copy',
+                str(audio_otimizado)
+            ]
+            
+            subprocess.run(cmd_cortar, check=True, capture_output=True)
+        
+        print(f"✅ Áudio otimizado: {audio_otimizado}")
+        
+        # 3. Ajustar legenda SRT se existir (SOBRESCREVE o arquivo original)
+        if srt_file and srt_file.exists():
+            # ✅ NOVO: Verifica problemas antes de ajustar
+            print("🔍 Verificando problemas no SRT original...")
+            problemas = verificar_problemas_srt(srt_file)
+            
+            # ✅ CORREÇÃO: Cria arquivo temporário, ajusta, depois substitui o original
+            srt_temp = srt_file.parent / f"{srt_file.stem}_temp{srt_file.suffix}"
+            ajustar_legenda_srt(srt_file, srt_temp, silencios)
+            
+            # ✅ NOVO: Verifica problemas após ajuste
+            print("🔍 Verificando problemas no SRT ajustado...")
+            problemas_apos = verificar_problemas_srt(srt_temp)
+            
+            # Substitui o arquivo original pelo ajustado
+            srt_file.unlink()  # Remove original
+            srt_temp.rename(srt_file)  # Renomeia temp para original
+            
+            print(f"✅ Legenda SRT ajustada e sobrescrita: {srt_file}")
+        else:
+            srt_ajustado = None
+        
+        return str(audio_otimizado), str(srt_ajustado) if srt_ajustado else None
+        
+    except Exception as e:
+        print(f"⚠️  Erro na otimização de áudio: {e}")
+        return audio_path, srt_path
+
 def analisar_gaps_srt(arquivo_srt: str) -> Dict[str, Any]:
     """
     Analisa os gaps entre legendas SRT sem modificar o arquivo
@@ -387,3 +556,60 @@ def analisar_gaps_srt(arquivo_srt: str) -> Dict[str, Any]:
         'duracao_total_original_ms': subtitles[-1]['end_ms'] if subtitles else 0,
         'duracao_total_ajustada_ms': (subtitles[-1]['end_ms'] - total_gap) if subtitles else 0
     }
+
+def verificar_problemas_srt(srt_path: str):
+    """
+    Verifica problemas comuns no arquivo SRT
+    """
+    try:
+        with open(srt_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        blocks = content.strip().split('\n\n')
+        problemas = []
+        
+        for i, block in enumerate(blocks):
+            lines = block.split('\n')
+            if len(lines) >= 3:
+                try:
+                    num = int(lines[0])
+                    time_line = lines[1]
+                    
+                    if '-->' in time_line:
+                        start_str, end_str = time_line.split(' --> ')
+                        start_sec = srt_to_seconds(start_str)
+                        end_sec = srt_to_seconds(end_str)
+                        
+                        # Verifica duração muito curta
+                        if end_sec - start_sec < 0.1:
+                            problemas.append(f"Legenda {num}: Duração muito curta ({end_sec - start_sec:.2f}s)")
+                        
+                        # Verifica sobreposição com próximo bloco
+                        if i < len(blocks) - 1:
+                            next_block = blocks[i + 1].split('\n')
+                            if len(next_block) >= 3 and '-->' in next_block[1]:
+                                next_start_str = next_block[1].split(' --> ')[0]
+                                next_start_sec = srt_to_seconds(next_start_str)
+                                
+                                if end_sec > next_start_sec:
+                                    problemas.append(f"Legenda {num}: Sobreposição com próxima ({end_sec - next_start_sec:.2f}s)")
+                        
+                        # Verifica ordem cronológica
+                        if end_sec < start_sec:
+                            problemas.append(f"Legenda {num}: Fim antes do início")
+                            
+                except (ValueError, IndexError) as e:
+                    problemas.append(f"Bloco {i+1}: Formato inválido - {e}")
+        
+        if problemas:
+            print("⚠️  Problemas detectados no SRT:")
+            for problema in problemas:
+                print(f"   - {problema}")
+        else:
+            print("✅ SRT sem problemas detectados")
+            
+        return problemas
+        
+    except Exception as e:
+        print(f"❌ Erro ao verificar SRT: {e}")
+        return []

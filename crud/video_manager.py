@@ -95,40 +95,24 @@ class VideoManager:
         self,
         roteiro_id: int,
         arquivo_video: str,
-        duracao: int | None = None,
-        titulo: str | None = None,
-        thumb: str | None = None,
+        duracao: int | None = None,                
     ) -> bool:
         """Salva informações do vídeo renderizado (inclui titulo e thumb)."""
         with Session(self.engine) as session:
             try:
                 video = self.buscar_por_roteiro_id(roteiro_id)
-                # fallback: puxa do Roteiro se não foi passado
-                if titulo is None or thumb is None:
-                    r = session.get(Roteiro, roteiro_id)
-                    if r:
-                        if titulo is None:
-                            titulo = r.titulo
-                        if thumb is None:
-                            thumb = r.thumb
 
                 if video:
                     video.arquivo_video = arquivo_video
                     if duracao is not None:
-                        video.duracao = duracao
-                    if titulo is not None:
-                        video.titulo = titulo
-                    if thumb is not None:
-                        video.thumb = thumb
+                        video.duracao = duracao                    
                     session.commit()
                     return True
                 else:
                     video = Video(
                         roteiro_id=roteiro_id,
                         arquivo_video=arquivo_video,
-                        duracao=duracao,
-                        titulo=titulo,
-                        thumb=thumb,
+                        duracao=duracao,                                                
                     )
                     session.add(video)
                     session.commit()

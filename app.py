@@ -374,7 +374,13 @@ def get_videos_with_filters(filter_type='all', search=''):
         for roteiro in roteiros:
             canal = db.canais.buscar_por_id(roteiro.canal_id)
             video_info = db.videos.buscar_por_roteiro_id(roteiro.id)
-            
+
+            texto = roteiro.texto or ''
+            palavras_geradas = len(texto.split()) if texto else 0
+
+            # Estimativa simples considerando 150 palavras por minuto como média de narração
+            duracao_estimada = round(palavras_geradas / 150, 2) if palavras_geradas else None
+
             # ✅ CORREÇÃO: Verifica se o canal existe
             if not canal:
                 canal_nome = "Canal Não Encontrado"
@@ -398,6 +404,8 @@ def get_videos_with_filters(filter_type='all', search=''):
                 'canal_nome': canal_nome,
                 'canal_id': roteiro.canal_id,
                 'canal_obj': canal,  # ✅ Adiciona o objeto canal completo
+                'palavras_geradas': palavras_geradas if palavras_geradas else None,
+                'duracao_estimada': duracao_estimada,
                 'video_info': {
                     'arquivo_audio': video_info.arquivo_audio if video_info else None,
                     'arquivo_video': video_info.arquivo_video if video_info else None,

@@ -362,73 +362,7 @@ def api_temas_canal(canal_nome):
             'temas': [], 
             'erro': f'Erro ao carregar temas: {str(e)}'
         })
-    
-
-@app.route('/api/videos/<int:video_id>/agendamentos')
-def api_video_agendamentos(video_id):
-    """API para obter agendamentos de um vídeo"""
-    try:
-        # Buscar agendamentos do vídeo (implementar conforme seu modelo)
-        agendamentos = []  # Substituir pela busca real no banco
-        
-        return jsonify(agendamentos)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/agendamentos', methods=['POST'])
-def api_criar_agendamento():
-    """API para criar novo agendamento"""
-    try:
-        data = request.get_json()
-        
-        # Validar dados
-        required_fields = ['video_id', 'plataformas', 'data_publicacao', 'hora_publicacao']
-        for field in required_fields:
-            if field not in data:
-                return jsonify({'status': 'error', 'message': f'Campo obrigatório faltando: {field}'}), 400
-        
-        # Criar agendamento no banco (implementar conforme seu modelo)
-        # agendamento = criar_agendamento_no_banco(data)
-        
-        return jsonify({
-            'status': 'success', 
-            'message': 'Agendamento criado com sucesso!',
-            'agendamento_id': 1  # Substituir pelo ID real
-        })
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
-
-@app.route('/api/agendamentos/<int:agendamento_id>', methods=['GET', 'PUT', 'DELETE'])
-def api_gerenciar_agendamento(agendamento_id):
-    """API para gerenciar agendamento específico"""
-    try:
-        if request.method == 'GET':
-            # Buscar agendamento
-            agendamento = {}  # Substituir pela busca real
-            return jsonify(agendamento)
-            
-        elif request.method == 'PUT':
-            # Atualizar agendamento
-            data = request.get_json()
-            # atualizar_agendamento_no_banco(agendamento_id, data)
-            return jsonify({'status': 'success', 'message': 'Agendamento atualizado!'})
-            
-        elif request.method == 'DELETE':
-            # Excluir agendamento
-            # excluir_agendamento_no_banco(agendamento_id)
-            return jsonify({'status': 'success', 'message': 'Agendamento excluído!'})
-            
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
-
-@app.route('/api/videos/<int:video_id>/agendamentos', methods=['DELETE'])
-def api_cancelar_todos_agendamentos(video_id):
-    """API para cancelar todos os agendamentos de um vídeo"""
-    try:
-        # cancelar_agendamentos_video(video_id)
-        return jsonify({'status': 'success', 'message': 'Todos os agendamentos foram cancelados!'})
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+   
 
 # Funções auxiliares
 def get_videos_with_filters(filter_type='all', search=''):
@@ -497,6 +431,136 @@ def get_videos_with_filters(filter_type='all', search=''):
     except Exception as e:
         print(f"Erro ao buscar vídeos: {e}")
         return []
+
+
+@app.route('/api/videos/<int:video_id>/agendamentos')
+def api_video_agendamentos(video_id):
+    """API para obter agendamentos de um vídeo - VERSÃO FUNCIONAL"""
+    try:
+        agendamentos = db.agendamentos.buscar_por_video_id(video_id)
+        
+        agendamentos_formatados = []
+        for ag in agendamentos:
+            agendamentos_formatados.append({
+                'id': ag.id,
+                'video_id': ag.video_id,
+                'plataformas': json.loads(ag.plataformas),  # Converte JSON string para lista
+                'data_publicacao': ag.data_publicacao,
+                'hora_publicacao': ag.hora_publicacao,
+                'recorrente': ag.recorrente,
+                'status': ag.status
+            })
+        
+        return jsonify(agendamentos_formatados)
+    except Exception as e:
+        print(f"❌ Erro ao buscar agendamentos: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/agendamentos', methods=['POST'])
+def api_criar_agendamento():
+    """API para criar novo agendamento - VERSÃO FUNCIONAL"""
+    try:
+        data = request.get_json()
+        
+        # Validar dados
+        required_fields = ['video_id', 'plataformas', 'data_publicacao', 'hora_publicacao']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'status': 'error', 'message': f'Campo obrigatório faltando: {field}'}), 400
+        
+        # Verificar se o vídeo existe
+        video = db.roteiros.buscar_por_id(data['video_id'])
+        if not video:
+            return jsonify({'status': 'error', 'message': 'Vídeo não encontrado'}), 404
+        
+        # Criar agendamento
+        from crud.models import Agendamento
+        agendamento = Agendamento(
+            video_id=data['video_id'],
+            plataformas=json.dumps(data['plataformas']),  # Converte lista para JSON string
+            data_publicacao=data['data_publicacao'],
+            hora_publicacao=data['hora_publicacao'],
+            recorrente=data.get('recorrente', False)
+        )
+        
+        agendamento_criado = db.agendamentos.criar(agendamento)
+        
+        return jsonify({
+            'status': 'success', 
+            'message': 'Agendamento criado com sucesso!',
+            'agendamento_id': agendamento_criado.id
+        })
+    except Exception as e:
+        print(f"❌ Erro ao criar agendamento: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/agendamentos/<int:agendamento_id>', methods=['GET', 'PUT', 'DELETE'])
+def api_gerenciar_agendamento(agendamento_id):
+    """API para gerenciar agendamento específico - VERSÃO FUNCIONAL"""
+    try:
+        if request.method == 'GET':
+            agendamento = db.agendamentos.buscar_por_id(agendamento_id)
+            if not agendamento:
+                return jsonify({'error': 'Agendamento não encontrado'}), 404
+            
+            return jsonify({
+                'id': agendamento.id,
+                'video_id': agendamento.video_id,
+                'plataformas': json.loads(agendamento.plataformas),
+                'data_publicacao': agendamento.data_publicacao,
+                'hora_publicacao': agendamento.hora_publicacao,
+                'recorrente': agendamento.recorrente,
+                'status': agendamento.status
+            })
+            
+        elif request.method == 'PUT':
+            data = request.get_json()
+            agendamento = db.agendamentos.buscar_por_id(agendamento_id)
+            if not agendamento:
+                return jsonify({'error': 'Agendamento não encontrado'}), 404
+
+            # Campos permitidos para atualização
+            campos_permitidos = ['plataformas', 'data_publicacao', 'hora_publicacao', 'recorrente', 'status']
+            atualizacao = {}
+            for campo in campos_permitidos:
+                if campo in data:
+                    if campo == 'plataformas':
+                        atualizacao[campo] = json.dumps(data[campo])
+                    else:
+                        atualizacao[campo] = data[campo]
+
+            if atualizacao:
+                success = db.agendamentos.atualizar(agendamento_id, **atualizacao)
+                if success:
+                    return jsonify({'status': 'success', 'message': 'Agendamento atualizado!'})
+                else:
+                    return jsonify({'status': 'error', 'message': 'Falha ao atualizar agendamento'}), 500
+            else:
+                return jsonify({'status': 'error', 'message': 'Nenhum campo válido para atualização'}), 400
+            
+        elif request.method == 'DELETE':
+            success = db.agendamentos.deletar(agendamento_id)
+            if success:
+                return jsonify({'status': 'success', 'message': 'Agendamento excluído!'})
+            else:
+                return jsonify({'status': 'error', 'message': 'Agendamento não encontrado'}), 404
+            
+    except Exception as e:
+        print(f"❌ Erro ao gerenciar agendamento: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/videos/<int:video_id>/agendamentos', methods=['DELETE'])
+def api_cancelar_todos_agendamentos(video_id):
+    """API para cancelar todos os agendamentos de um vídeo - VERSÃO FUNCIONAL"""
+    try:
+        success = db.agendamentos.deletar_por_video_id(video_id)
+        if success:
+            return jsonify({'status': 'success', 'message': 'Todos os agendamentos foram cancelados!'})
+        else:
+            return jsonify({'status': 'error', 'message': 'Nenhum agendamento encontrado para este vídeo'}), 404
+    except Exception as e:
+        print(f"❌ Erro ao cancelar agendamentos: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 def get_video_by_id(video_id):
     """Busca um vídeo específico pelo ID"""

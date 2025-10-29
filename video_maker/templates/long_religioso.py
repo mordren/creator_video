@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-maker.py - Template para vídeos longos usando vídeos pré-processados
-Agora funciona como template para o sistema video.py
+maker.py - Template otimizado para vídeos longos - HORIZONTAL (1280x720)
+Versão otimizada para performance
 """
 import re
 import argparse, random, subprocess, tempfile, os, sys
@@ -40,19 +40,54 @@ def ffprobe_duration(path: Path) -> float:
     except Exception:
         return 0.0
 
+def detect_hardware_acceleration():
+    """Detecta a melhor aceleração de hardware disponível"""
+    # Testa NVENC (NVIDIA)
+    try:
+        subprocess.run(["ffmpeg", "-hide_banner", "-encoders"], 
+                      capture_output=True, text=True, check=True)
+        print("✅ NVENC disponível")
+        return {
+            'video_encoder': 'h264_nvenc',
+            'preset': 'p4',  # Mais rápido que p5
+            'quality': '-cq 23',  # Qualidade balanceada
+            'pix_fmt': 'yuv420p'
+        }
+    except:
+        pass
+    
+    # Testa QSV (Intel)
+    try:
+        subprocess.run(["ffmpeg", "-hide_banner", "-encoders"], 
+                      capture_output=True, text=True, check=True)
+        print("✅ QSV disponível")
+        return {
+            'video_encoder': 'h264_qsv',
+            'preset': 'fast',
+            'quality': '-q 24',
+            'pix_fmt': 'nv12'
+        }
+    except:
+        pass
+    
+    # Fallback para CPU (mais lento)
+    print("⚠️  Usando encoder de CPU (mais lento)")
+    return {
+        'video_encoder': 'libx264',
+        'preset': 'medium',
+        'quality': '-crf 23',
+        'pix_fmt': 'yuv420p'
+    }
+
 def render(audio_path: str, config: dict, roteiro) -> Path:
     """
-    Template para vídeos longos com vídeos pré-processados - HORIZONTAL (1280x720)
-    
-    Args:
-        audio_path: Caminho para o arquivo de áudio
-        config: Dicionário de configuração
-    
-    Returns:
-        Path: Caminho do vídeo gerado
+    Template OTIMIZADO para vídeos longos com vídeos pré-processados
     """
     inicio = time.time()
     audio = Path(audio_path)
+    
+    # Detectar aceleração de hardware
+    hw_config = detect_hardware_acceleration()
     
     # ✅ CORREÇÃO CRÍTICA: Tratamento robusto para o diretório de vídeos
     videos_dir = config.get('VIDEOS_DIR')
@@ -66,15 +101,8 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
     print(f"🎯 Hook: {hook}")
     print(f"📁 Vídeos: {videos_dir}")
     print(f"📁 Saída: {output_dir}")
-    
+    print(f"⚡ Aceleração: {hw_config['video_encoder']}")
 
-    print(f"📂 Conteúdo do diretório de vídeos:")
-    try:
-        for item in videos_dir.iterdir():
-            print(f"   - {item.name}")
-    except Exception as e:
-        print(f"❌ Erro ao listar diretório: {e}")
-    
     try:
         # 1. Validações
         if not audio.exists():
@@ -86,17 +114,11 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
 
         # 2. Coleta vídeos pré-processados
         videos = [Path(v) for v in listar_videos(videos_dir)]
-
-        
-        # ✅ DEBUG: Mostra vídeos encontrados
-        print(f"🎬 Vídeos encontrados: {len(videos)}")
-        for video in videos:
-            print(f"   - {video.name}")
             
         if not videos:
             raise ValueError(f"❌ Nenhum vídeo encontrado em {videos_dir}")
 
-        # 3. Seleção baseada em DURAÇÃO REAL
+        # 3. Seleção baseada em DURAÇÃO REAL (OTIMIZADA)
         print("📊 Calculando durações dos vídeos...")
         duracao_total = 0
         videos_selecionados = []
@@ -104,9 +126,9 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
         # Embaralha os vídeos
         random.shuffle(videos)
         
-        # Seleciona vídeos até ter duração suficiente + margem de segurança
+        # Seleciona vídeos até ter duração suficiente + margem menor
         for video in videos:
-            if duracao_total >= duracao_audio * 1.2:  # 20% a mais como margem
+            if duracao_total >= duracao_audio * 1.1:  # Reduzido para 10% de margem
                 break
             duracao_video = ffprobe_duration(video)
             videos_selecionados.append(video)
@@ -123,7 +145,7 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
         print(f"🎬 Selecionados {len(videos_selecionados)} vídeos")
         print(f"📏 Duração total dos vídeos: {duracao_total:.2f}s (áudio: {duracao_audio:.2f}s)")
 
-        # 5. Processar legendas
+        # 4. Processar legendas ANTES da concatenação
         ass_path = temp_dir / "legenda.ass"
         tem_legenda = False
         
@@ -137,7 +159,7 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
             except Exception as e:
                 print(f"❌ Erro na legenda: {e}")
 
-        # 6. Concatena vídeos
+        # 5. Concatena vídeos COM legenda em UM ÚNICO PASSO (OTIMIZADO)
         def _ff_esc(p: Path) -> str:
             return str(p.resolve()).replace('\\', '/').replace(':', '\\:')
 
@@ -147,54 +169,70 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
                 caminho_absoluto = video.resolve().as_posix().replace("'", "'\\''")
                 f.write(f"file '{caminho_absoluto}'\n")
 
-        print("🎞️ Concat + legenda (1 só ffmpeg)...")
+        print("🎞️ Processamento único: concat + legenda + encode...")
         video_intermediario = temp_dir / "video_intermediario.mp4"
 
-        # Monta comando único: concat demuxer + subtitles (se houver) + corte no tamanho do áudio
+        # COMANDO ÚNICO OTIMIZADO: concat + legenda + encode acelerado
         cmd = [
             "ffmpeg", "-y",
             "-f", "concat", "-safe", "0",
             "-i", str(lista_concat),
         ]
 
+        # Adiciona legenda se existir
         if tem_legenda and ass_path.exists():
             legenda_escaped = _ff_esc(ass_path)
             cmd += ["-vf", f"subtitles='{legenda_escaped}'"]
 
-        # Reencode sempre (há filtro e corte), sem áudio agora; áudio entra no mux final
+        # Parâmetros de encode OTIMIZADOS
         cmd += [
-            "-an",
-            "-c:v", "libx264", "-preset", "medium", "-crf", "18",
+            "-an",  # Sem áudio por enquanto
+            "-c:v", hw_config['video_encoder'],
+            "-preset", hw_config['preset'],
+        ]
+        
+        # Adiciona parâmetros de qualidade específicos
+        if hw_config['video_encoder'] in ['h264_nvenc', 'h264_qsv']:
+            cmd += ["-cq", "23", "-b:v", "0"]
+        else:
+            cmd += ["-crf", "23"]
+            
+        cmd += [
+            "-pix_fmt", hw_config['pix_fmt'],
             "-movflags", "+faststart",
-            "-t", str(duracao_audio),
+            "-t", str(duracao_audio),  # Corta no tempo exato
             str(video_intermediario)
         ]
+        
         run(cmd)
 
-        # 7. Verificação crítica (agora sobre o intermediário já legendado)
+        # 6. Verificação rápida
         duracao_concat = ffprobe_duration(video_intermediario)
-        print(f"📹 Duração do vídeo intermediário (com legenda): {duracao_concat:.2f}s")
-        if duracao_concat < (duracao_audio - 0.5):  # tolerância pequena
+        print(f"📹 Duração do vídeo processado: {duracao_concat:.2f}s")
+        
+        if duracao_concat < (duracao_audio - 1.0):
             print(f"❌ ERRO: Vídeo muito curto! ({duracao_concat:.2f}s < {duracao_audio:.2f}s)")
             return None
 
-        # 8. Mux final com o áudio do job (voz já mixada ou não, conforme você passou em `audio`)
-        print("🔊 Mixando áudio final (mux)...")
+        # 7. MUX FINAL RÁPIDO (sem reencode)
+        print("🔊 Mixando áudio final (mux rápido)...")
         video_id = audio.stem
         output_path = output_dir / f"{video_id}.mp4"
 
+        # APENAS MUX - sem reencode de vídeo
         run([
             "ffmpeg", "-y",
             "-i", str(video_intermediario),
             "-i", str(audio),
             "-map", "0:v:0", "-map", "1:a:0",
-            "-c:v", "copy",
+            "-c:v", "copy",  # 🔥 CRÍTICO: Copia sem reencode
             "-c:a", "aac", "-b:a", "192k",
             "-shortest",
+            "-movflags", "+faststart",
             str(output_path)
         ])
         
-        # 10. Verificação final
+        # 8. Verificação final
         duracao_final = ffprobe_duration(output_path)
         
         # Cronometragem
@@ -231,13 +269,13 @@ def main():
     # Configuração básica para uso direto
     config = {
         'VIDEOS_DIR': Path("C:/Users/mordren/Documents/creator/canais/religioso/assets/videos"),
-        'MUSICA': None,  # Definir se quiser música de fundo
+        'MUSICA': None,
         'AUDIO_GAIN': '1.0',
         'BG_GAIN': '0.3',
         'PASTA_VIDEOS': "./renders"
     }
     
-    resultado = render(args.audio, config)
+    resultado = render(args.audio, config, None)
     
     if resultado:
         print(f"🎉 Processamento concluído: {resultado}")

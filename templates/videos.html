@@ -54,6 +54,7 @@
 <div class="card mb-4">
     <div class="card-body">
         <form method="get" class="row g-3">
+            <!-- Filtro por Tipo -->
             <div class="col-md-3">
                 <label for="filter" class="form-label">Filtrar por:</label>
                 <select class="form-select" id="filter" name="filter">
@@ -61,17 +62,41 @@
                     <option value="audio" {% if filter_type=='audio' %}selected{% endif %}>Com Áudio</option>
                     <option value="video" {% if filter_type=='video' %}selected{% endif %}>Com Vídeo</option>
                     <option value="finalized" {% if filter_type=='finalized' %}selected{% endif %}>Finalizados</option>
+                    <option value="shorts" {% if filter_type=='shorts' %}selected{% endif %}>Shorts</option>
+                    <option value="longs" {% if filter_type=='longs' %}selected{% endif %}>Longs</option>
                 </select>
             </div>
-            <div class="col-md-6">
+            
+            <!-- Filtro por Canal -->
+            <div class="col-md-3">
+                <label for="channel" class="form-label">Canal:</label>
+                <select class="form-select" id="channel" name="channel">
+                    <option value="all" {% if selected_channel=='all' %}selected{% endif %}>Todos os Canais</option>
+                    {% for channel in channels %}
+                    <option value="{{ canal.id }}" {% if selected_channel==canal.id|string %}selected{% endif %}>
+                        {{ channel.nome }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Campo de Busca -->
+            <div class="col-md-4">
                 <label for="search" class="form-label">Buscar:</label>
                 <input type="text" class="form-control" id="search" name="search" 
                        value="{{ search }}" placeholder="Buscar por título, descrição ou tags...">
             </div>
-            <div class="col-md-3 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary w-100">
-                    <i class="fas fa-search"></i> Buscar
-                </button>
+            
+            <!-- Botões de Ação -->
+            <div class="col-md-2 d-flex align-items-end">
+                <div class="d-grid gap-2 w-100">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Aplicar
+                    </button>
+                    <a href="{{ url_for('list_videos') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> Limpar
+                    </a>
+                </div>
             </div>
         </form>
     </div>

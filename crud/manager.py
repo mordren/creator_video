@@ -1,4 +1,5 @@
 # crud/manager.py
+from crud.agendamento_manager import AgendamentoManager
 from .roteiro_manager import RoteiroManager
 from .video_manager import VideoManager
 from .canal_manager import CanalManager
@@ -10,6 +11,8 @@ class DatabaseManager:
         self.roteiros = RoteiroManager()
         self.videos = VideoManager()
         self.canais = CanalManager()
+        self.agendamentos = AgendamentoManager()  # NOVO
+
     
     # Métodos de compatibilidade para código legado
     def criar_roteiro(self, **kwargs):

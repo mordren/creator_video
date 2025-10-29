@@ -24,20 +24,42 @@
                     <strong>Título:</strong>
                     <p class="mb-0">{{ video.titulo }}</p>
                 </div>
-                
+
                 <div class="mb-3">
                     <strong>Descrição:</strong>
-                    <p class="mb-0">{{ video.descricao or "Sem descrição" }}</p>
+                    {% if video.descricao %}
+                    <p class="mb-0 texto-descricao">{{ video.descricao }}</p>
+                    {% else %}
+                    <p class="mb-0 text-muted">Sem descrição</p>
+                    {% endif %}
                 </div>
-                
+
                 <div class="mb-3">
                     <strong>Tags:</strong>
-                    <p class="mb-0">{{ video.tags or "Sem tags" }}</p>
+                    {% if video.tags %}
+                    <div class="d-flex flex-wrap gap-2 mt-1">
+                        {% for tag in video.tags.split(',') %}
+                            {% set tag_limpa = tag.strip() %}
+                            {% if tag_limpa %}
+                            <span class="badge bg-secondary">{{ tag_limpa }}</span>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="mb-0 text-muted">Sem tags</p>
+                    {% endif %}
                 </div>
-                
+
                 <div class="mb-3">
-                    <strong>Texto Completo:</strong>
-                    <div class="border p-3 bg-light" style="max-height: 300px; overflow-y: auto;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong class="mb-0">Texto Completo:</strong>
+                        {% if video.texto %}
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="copy-texto">
+                            <i class="fas fa-copy me-1"></i>Copiar texto
+                        </button>
+                        {% endif %}
+                    </div>
+                    <div id="texto-completo" class="border p-3 bg-light texto-completo">
                         {{ video.texto or "Sem texto" }}
                     </div>
                 </div>
@@ -314,8 +336,56 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const videoId = {{ video.id }};
-    
+    const videoId = {{ video.id | tojson }};
+
+    const copyButton = document.getElementById('copy-texto');
+    if (copyButton) {
+        const originalLabel = copyButton.innerHTML;
+        copyButton.addEventListener('click', () => {
+            const textoCompleto = document.getElementById('texto-completo');
+            const conteudo = textoCompleto ? textoCompleto.innerText.trim() : '';
+
+            if (!conteudo) {
+                return;
+            }
+
+            const clipboard = navigator.clipboard;
+            const copiar = clipboard && clipboard.writeText
+                ? clipboard.writeText(conteudo)
+                : new Promise((resolve, reject) => {
+                    try {
+                        const textarea = document.createElement('textarea');
+                        textarea.value = conteudo;
+                        textarea.style.position = 'fixed';
+                        textarea.style.opacity = '0';
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        const sucesso = document.execCommand('copy');
+                        document.body.removeChild(textarea);
+                        sucesso ? resolve() : reject();
+                    } catch (err) {
+                        reject(err);
+                    }
+                });
+
+            copiar
+                .then(() => {
+                    copyButton.innerHTML = '<i class="fas fa-check me-1"></i>Copiado!';
+                    copyButton.classList.remove('btn-outline-secondary');
+                    copyButton.classList.add('btn-success');
+
+                    setTimeout(() => {
+                        copyButton.innerHTML = originalLabel;
+                        copyButton.classList.add('btn-outline-secondary');
+                        copyButton.classList.remove('btn-success');
+                    }, 2000);
+                })
+                .catch(() => {
+                    alert('Não foi possível copiar o texto.');
+                });
+        });
+    }
+
     // ✅ FUNÇÕES DE AGENDAMENTO
     function carregarAgendamentos() {
         fetch(`/api/videos/${videoId}/agendamentos`)
@@ -593,6 +663,17 @@ document.addEventListener('DOMContentLoaded', function() {
 .editar-agendamento {
     padding: 0.25rem 0.5rem;
     font-size: 0.875rem;
+}
+
+.texto-completo {
+    max-height: 300px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    line-height: 1.6;
+}
+
+.texto-descricao {
+    white-space: pre-line;
 }
 
 /* Melhorias visuais */

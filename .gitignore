@@ -25,6 +25,7 @@ Thumbs.db
 
 # Logs
 *.log
+*.pickle
 
 # Output files (áudios, vídeos, imagens geradas)
 *.mp3

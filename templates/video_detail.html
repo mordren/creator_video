@@ -53,6 +53,7 @@
             </div>
             <div class="card-body">
                 <ul class="list-group list-group-flush">
+                                        
                     <li class="list-group-item d-flex justify-content-between">
                         <span>ID do Vídeo:</span>
                         <strong>#{{ video.id }}</strong>
@@ -120,6 +121,7 @@
                         {% if video.finalizado %}Sim{% else %}Não{% endif %}
                     </span>
                 </div>
+
             </div>
         </div>
 
@@ -164,7 +166,110 @@
                     <button class="btn btn-danger delete-video" data-video-id="{{ video.id }}">
                         <i class="fas fa-trash me-2"></i>Excluir Vídeo
                     </button>
+
+                    {% if video.video_gerado %}
+                    <button class="btn btn-success upload-youtube" data-video-id="{{ video.id }}">
+                        <i class="fab fa-youtube me-2"></i>Upload YouTube
+                    </button>
+                    {% endif %}
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalUploadConfirm" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fab fa-youtube me-2 text-danger"></i>
+                    Upload para YouTube
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Atenção:</strong> Nenhum agendamento encontrado.
+                </div>
+                <p>Deseja publicar este vídeo imediatamente no YouTube?</p>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="publicar_agora">
+                    <label class="form-check-label" for="publicar_agora">
+                        <strong>Publicar como público agora</strong>
+                    </label>
+                </div>
+                <div class="form-text">
+                    Se não marcar esta opção, o vídeo será enviado como "Privado" e você poderá publicar manualmente depois.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btn-confirm-upload">
+                    <i class="fas fa-upload me-2"></i>Fazer Upload
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalUploadProgress" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fab fa-youtube me-2 text-danger"></i>
+                    Upload para YouTube
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div id="upload-progress-content">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <p id="upload-status">Iniciando upload...</p>
+                    </div>
+                    
+                    <div class="progress mb-3" style="height: 20px;">
+                        <div id="upload-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                            <span id="upload-progress-text">0%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info small">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Upload em andamento:</strong> Esta operação pode levar vários minutos. 
+                        Você pode fechar esta janela que o processo continuará em segundo plano.
+                    </div>
+                </div>
+                
+                <div id="upload-success" style="display: none;">
+                    <div class="alert alert-success text-center">
+                        <i class="fas fa-check-circle fa-2x mb-3"></i>
+                        <h5>Upload Concluído!</h5>
+                        <p id="success-message" class="mb-0">Vídeo enviado com sucesso para o YouTube.</p>
+                    </div>
+                </div>
+                
+                <div id="upload-error" style="display: none;">
+                    <div class="alert alert-danger text-center">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                        <h5>Erro no Upload</h5>
+                        <p id="error-message" class="mb-0">Ocorreu um erro durante o upload.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="btn-close-progress">Fechar</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="btn-reload-page" style="display: none;">
+                    <i class="fas fa-redo me-2"></i>Recarregar Página
+                </button>
+                <button type="button" class="btn btn-warning" id="btn-retry-upload" style="display: none;">
+                    <i class="fas fa-sync me-2"></i>Tentar Novamente
+                </button>
             </div>
         </div>
     </div>
@@ -338,6 +443,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 `;
             });
     }
+
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const hoje = new Date();
+    const yyyy = hoje.getFullYear();
+    const mm = String(hoje.getMonth() + 1).padStart(2, '0');
+    const dd = String(hoje.getDate()).padStart(2, '0');
+    document.getElementById('data_publicacao').value = `${yyyy}-${mm}-${dd}`;
+  });
+
 
     function atualizarInterfaceAgendamento(agendamentos) {
         const statusAgendamento = document.getElementById('status-agendamento');
@@ -559,6 +674,225 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+// ✅ FUNÇÃO DE UPLOAD PARA YOUTUBE (COM CELERY)
+document.querySelector('.upload-youtube')?.addEventListener('click', function() {
+    const videoId = this.getAttribute('data-video-id');
+    iniciarUploadYouTube(videoId);
+});
+
+let currentTaskId = null;
+let pollInterval = null;
+
+function iniciarUploadYouTube(videoId) {
+    console.log(`🎬 Iniciando upload para YouTube do vídeo ID: ${videoId}`);
+    
+    // Primeiro verifica se há agendamentos
+    fetch(`/api/videos/${videoId}/agendamentos`)
+        .then(response => response.json())
+        .then(agendamentos => {
+            const agendamentoYouTube = agendamentos.find(ag => 
+                ag.plataformas.includes('youtube') && ag.status === 'agendado'
+            );
+            
+            if (agendamentoYouTube) {
+                // Se há agendamento, confirma e faz upload
+                if (confirm(`Este vídeo está agendado para ${agendamentoYouTube.data_publicacao} às ${agendamentoYouTube.hora_publicacao}. Deseja prosseguir com o upload agendado?`)) {
+                    iniciarUploadCelery(videoId, false);
+                }
+            } else {
+                // Se não há agendamento, mostra modal de confirmação
+                const modal = new bootstrap.Modal(document.getElementById('modalUploadConfirm'));
+                modal.show();
+                
+                // Configurar o botão de confirmação
+                document.getElementById('btn-confirm-upload').onclick = function() {
+                    const publicarAgora = document.getElementById('publicar_agora').checked;
+                    iniciarUploadCelery(videoId, publicarAgora);
+                    modal.hide();
+                };
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao verificar agendamentos:', error);
+            // Em caso de erro, pergunta se quer fazer upload imediato
+            if (confirm('Erro ao verificar agendamentos. Deseja fazer upload imediato?')) {
+                iniciarUploadCelery(videoId, true);
+            }
+        });
+}
+
+function iniciarUploadCelery(videoId, publicarImediatamente) {
+    const btn = document.querySelector('.upload-youtube');
+    const originalText = btn.innerHTML;
+    
+    // Mostrar loading no botão
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Iniciando...';
+    btn.disabled = true;
+    
+    // Iniciar a tarefa Celery
+    fetch(`/api/videos/${videoId}/upload-youtube`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            publicar_imediato: publicarImediatamente
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // Tarefa iniciada com sucesso
+            currentTaskId = data.task_id;
+            console.log(`✅ Tarefa Celery iniciada: ${currentTaskId}`);
+            
+            // Mostrar modal de progresso
+            mostrarModalProgresso();
+            
+            // Iniciar polling do status
+            iniciarPollingStatus();
+            
+        } else {
+            alert('❌ ' + data.message);
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao iniciar upload:', error);
+        alert('❌ Erro ao iniciar upload para YouTube');
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+}
+
+function mostrarModalProgresso() {
+    const modal = new bootstrap.Modal(document.getElementById('modalUploadProgress'));
+    modal.show();
+    
+    // Resetar o modal
+    document.getElementById('upload-progress-content').style.display = 'block';
+    document.getElementById('upload-success').style.display = 'none';
+    document.getElementById('upload-error').style.display = 'none';
+    document.getElementById('btn-reload-page').style.display = 'none';
+    document.getElementById('btn-retry-upload').style.display = 'none';
+    document.getElementById('btn-close-progress').style.display = 'block';
+    
+    atualizarProgresso(0, 'Iniciando upload...');
+}
+
+function iniciarPollingStatus() {
+    // Limpar intervalo anterior se existir
+    if (pollInterval) {
+        clearInterval(pollInterval);
+    }
+    
+    // Verificar status a cada 2 segundos
+    pollInterval = setInterval(() => {
+        if (!currentTaskId) return;
+        
+        fetch(`/api/tasks/${currentTaskId}/status`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Status da tarefa:', data);
+                
+                if (data.state === 'PROGRESS') {
+                    // Atualizar progresso
+                    const percent = Math.round((data.current / data.total) * 100);
+                    atualizarProgresso(percent, data.status);
+                    
+                } else if (data.state === 'SUCCESS') {
+                    // Upload concluído com sucesso
+                    clearInterval(pollInterval);
+                    uploadConcluido(true, data.result?.message || 'Upload concluído com sucesso!');
+                    
+                } else if (data.state === 'FAILURE' || data.state === 'ERROR') {
+                    // Upload falhou
+                    clearInterval(pollInterval);
+                    uploadConcluido(false, data.status || 'Erro durante o upload');
+                    
+                }
+                // Para estado PENDING, não faz nada - continua mostrando "Aguardando..."
+            })
+            .catch(error => {
+                console.error('Erro ao verificar status:', error);
+            });
+    }, 2000);
+}
+
+function atualizarProgresso(percent, status) {
+    const progressBar = document.getElementById('upload-progress-bar');
+    const progressText = document.getElementById('upload-progress-text');
+    const statusElement = document.getElementById('upload-status');
+    
+    progressBar.style.width = `${percent}%`;
+    progressBar.setAttribute('aria-valuenow', percent);
+    progressText.textContent = `${percent}%`;
+    statusElement.textContent = status;
+    
+    // Mudar cor baseada no progresso
+    if (percent < 30) {
+        progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-warning';
+    } else if (percent < 70) {
+        progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-info';
+    } else {
+        progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-success';
+    }
+}
+
+function uploadConcluido(success, message) {
+    const progressContent = document.getElementById('upload-progress-content');
+    const successContent = document.getElementById('upload-success');
+    const errorContent = document.getElementById('upload-error');
+    const closeBtn = document.getElementById('btn-close-progress');
+    const reloadBtn = document.getElementById('btn-reload-page');
+    const retryBtn = document.getElementById('btn-retry-upload');
+    
+    progressContent.style.display = 'none';
+    
+    if (success) {
+        successContent.style.display = 'block';
+        document.getElementById('success-message').textContent = message;
+        closeBtn.style.display = 'none';
+        reloadBtn.style.display = 'inline-block';
+        
+        // Habilitar o botão de upload novamente
+        const uploadBtn = document.querySelector('.upload-youtube');
+        uploadBtn.innerHTML = '<i class="fab fa-youtube me-2"></i>Upload YouTube';
+        uploadBtn.disabled = false;
+        
+    } else {
+        errorContent.style.display = 'block';
+        document.getElementById('error-message').textContent = message;
+        closeBtn.style.display = 'inline-block';
+        retryBtn.style.display = 'inline-block';
+        
+        // Configurar botão de tentar novamente
+        retryBtn.onclick = function() {
+            const videoId = document.querySelector('.upload-youtube').getAttribute('data-video-id');
+            iniciarUploadYouTube(videoId);
+        };
+        
+        // Habilitar o botão de upload novamente
+        const uploadBtn = document.querySelector('.upload-youtube');
+        uploadBtn.innerHTML = '<i class="fab fa-youtube me-2"></i>Upload YouTube';
+        uploadBtn.disabled = false;
+    }
+    
+    // Configurar botão de recarregar página
+    reloadBtn.onclick = function() {
+        location.reload();
+    };
+}
+
+// Limpar intervalo quando o modal for fechado
+document.getElementById('modalUploadProgress').addEventListener('hidden.bs.modal', function() {
+    if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+    }
+});
+
     // ✅ INICIALIZAR
     carregarAgendamentos();
 });
@@ -608,6 +942,33 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .btn {
     border-radius: 0.375rem;
+}
+
+.upload-youtube {
+    background: linear-gradient(135deg, #FF0000, #CC0000);
+    border: none;
+    color: white;
+    font-weight: 600;
+}
+
+.upload-youtube:hover {
+    background: linear-gradient(135deg, #CC0000, #990000);
+    color: white;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    border: none;
+}
+
+/* Loading animation */
+.fa-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 </style>
 {% endblock %}

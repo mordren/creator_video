@@ -26,6 +26,11 @@ PALAVRAS_POR_MINUTO = 140  # Taxa média de fala em português
 try:
     from read_config import carregar_config_canal
     from providers.base_texto import make_provider, ModelParams
+    # Garantir registro do provider Claude, se disponível
+    try:
+        from providers import claude_text  # noqa: F401
+    except Exception:
+        pass
     from utils import extract_json_maybe
     from crud.roteiro_manager import RoteiroManager
     from crud.canal_manager import CanalManager

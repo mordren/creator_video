@@ -97,7 +97,7 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
         # Intro com capa (3 segundos)
         try:
             print("🎬 Criando intro com capa...")
-            intro = aplicar_efeito('zoom_pulse', str(capa_path), 3.0)
+            intro = aplicar_efeito('camera_instavel', str(capa_path), 3.0)
             if intro and hasattr(intro, 'filename'):
                 video_files.append(intro.filename)
                 print("✅ Intro criada")

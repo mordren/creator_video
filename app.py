@@ -1,15 +1,25 @@
 # app.py
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, url_for
 import sys
 from pathlib import Path
 import json
 from datetime import datetime
+from crud.models import Canal, Roteiro
 from read_config import carregar_config_canal
+from sqlmodel import Session, select, func
+import os
+from tasks import generate_audio_task, generate_video_task, upload_youtube_task, check_task_status
+from celery_app import celery_app
 
 # Adiciona o diretório atual ao path para imports
 sys.path.append(str(Path(__file__).parent))
 
 app = Flask(__name__)
+
+app.config.update(
+    CELERY_BROKER_URL=os.getenv('CELERY_BROKER_URL', 'redis://192.168.31.200:6379/0'),
+    CELERY_RESULT_BACKEND=os.getenv('CELERY_RESULT_BACKEND', 'redis://192.168.31.200:6379/0'),
+)
 
 # Importações do sistema existente
 try:
@@ -32,27 +42,90 @@ def index():
 
 @app.route('/videos')
 def list_videos():
-    """Lista todos os vídeos com filtros"""
-    # Parâmetros de filtro
-    filter_type = request.args.get('filter', 'all')
-    search = request.args.get('search', '')
+    try:
+        filter_type = request.args.get('filter', 'all')
+        search = request.args.get('search', '')
+        selected_channel = request.args.get('channel', 'all')
+        tipo_filter = request.args.get('tipo', 'all')
+
+        print(f"🔍 Filtros: filter={filter_type}, channel={selected_channel}, tipo={tipo_filter}, search={search}")
+
+        # Buscar todos os canais
+        db_manager = DatabaseManager()
+        channels = db_manager.canais.listar(apenas_ativos=True)
+        print(f"📺 Canais encontrados: {len(channels)}")
+        
+        # Criar um dicionário de canais por ID para lookup rápido
+        canais_por_id = {canal.id: canal for canal in channels}
+
+        # Buscar todos os roteiros
+        from crud.connection import engine
+        with Session(engine) as session:
+            query = select(Roteiro)
+            
+            # Aplicar filtros
+            if filter_type == 'audio':
+                query = query.where(Roteiro.audio_gerado == True)
+            elif filter_type == 'video':
+                query = query.where(Roteiro.video_gerado == True)
+            elif filter_type == 'finalized':
+                query = query.where(Roteiro.finalizado == True)
+            
+            if selected_channel != 'all':
+                query = query.where(Roteiro.canal_id == int(selected_channel))
+            
+            if tipo_filter != 'all':
+                if tipo_filter == 'short':
+                    query = query.where(Roteiro.resolucao == '720x1280')
+                elif tipo_filter == 'long':
+                    query = query.where(Roteiro.resolucao == '1280x720')
+                elif tipo_filter == 'reel':
+                    query = query.where(Roteiro.resolucao == 'vertical')
+            
+            if search:
+                search_term = f"%{search}%"
+                query = query.where(
+                    (Roteiro.titulo.ilike(search_term)) |
+                    (Roteiro.descricao.ilike(search_term)) |
+                    (Roteiro.tags.ilike(search_term))
+                )
+            
+            query = query.order_by(Roteiro.data_criacao.desc())
+            videos = session.exec(query).all()
+            
+            print(f"🎬 Vídeos encontrados: {len(videos)}")
+
+        # Calcular estatísticas
+        stats = {
+            'total': len(videos),
+            'com_audio': len([v for v in videos if v.audio_gerado]),
+            'com_video': len([v for v in videos if v.video_gerado]),
+            'finalizados': len([v for v in videos if v.finalizado])
+        }
+
+        return render_template('videos.html',
+                             videos=videos,
+                             stats=stats,
+                             filter_type=filter_type,
+                             search=search,
+                             selected_channel=selected_channel,
+                             tipo_filter=tipo_filter,
+                             channels=channels,
+                             canais_por_id=canais_por_id)  # Passar o dicionário para o template
+
+    except Exception as e:
+        print(f"❌ Erro na rota list_videos: {e}")
+        import traceback
+        traceback.print_exc()
+        return render_template('videos.html', 
+                             videos=[],
+                             stats={'total': 0, 'com_audio': 0, 'com_video': 0, 'finalizados': 0},
+                             filter_type='all',
+                             search='',
+                             selected_channel='all',
+                             tipo_filter='all',
+                             channels=[])
     
-    # Buscar vídeos
-    videos = get_videos_with_filters(filter_type, search)
-    
-    # Estatísticas
-    stats = {
-        'total': len(videos),
-        'com_audio': sum(1 for v in videos if v['audio_gerado']),
-        'com_video': sum(1 for v in videos if v['video_gerado']),
-        'finalizados': sum(1 for v in videos if v['finalizado'])
-    }
-    
-    return render_template('videos.html', 
-                         videos=videos, 
-                         filter_type=filter_type,
-                         search=search,
-                         stats=stats)
 
 @app.route('/videos/<int:video_id>')
 def video_detail(video_id):
@@ -83,51 +156,66 @@ def api_video_detail(video_id):
     return jsonify(video)
 
 @app.route('/api/videos/<int:video_id>/generate-audio', methods=['POST'])
-def api_generate_audio(video_id):
-    """API para gerar áudio"""
+def api_generate_audio_async(video_id):
+    """API para gerar áudio de forma assíncrona"""
     try:
-        audio_system = AudioSystem()
-        success = audio_system.generate_audio(video_id)
+        # Inicia a tarefa Celery
+        task = generate_audio_task.delay(video_id)
         
-        if success:
-            return jsonify({
-                'status': 'success', 
-                'message': 'Áudio gerado com sucesso!'
-            })
-        else:
-            return jsonify({
-                'status': 'error', 
-                'message': 'Falha ao gerar áudio'
-            }), 500
+        return jsonify({
+            'status': 'success', 
+            'message': 'Geração de áudio iniciada em segundo plano!',
+            'task_id': task.id,
+            'video_id': video_id
+        })
             
     except Exception as e:
         return jsonify({
             'status': 'error', 
-            'message': f'Erro: {str(e)}'
+            'message': f'Erro ao iniciar geração de áudio: {str(e)}'
         }), 500
 
 @app.route('/api/videos/<int:video_id>/generate-video', methods=['POST'])
-def api_generate_video(video_id):
-    """API para gerar vídeo"""
+def api_generate_video_async(video_id):
+    """API para gerar vídeo de forma assíncrona"""
     try:
-        video_gen = VideoGenerator()
-        success = video_gen.gerar_video(video_id)
+        # Inicia a tarefa Celery
+        task = generate_video_task.delay(video_id)
         
-        if success:
-            return jsonify({
-                'status': 'success', 
-                'message': 'Vídeo gerado com sucesso!'
-            })
-        else:
-            return jsonify({
-                'status': 'error', 
-                'message': 'Falha ao gerar vídeo'
-            }), 500
+        return jsonify({
+            'status': 'success', 
+            'message': 'Geração de vídeo iniciada em segundo plano!',
+            'task_id': task.id,
+            'video_id': video_id
+        })
             
     except Exception as e:
         return jsonify({
             'status': 'error', 
-            'message': f'Erro: {str(e)}'
+            'message': f'Erro ao iniciar geração de vídeo: {str(e)}'
+        }), 500
+    
+@app.route('/api/videos/<int:video_id>/upload-youtube', methods=['POST'])
+def api_upload_youtube_async(video_id):
+    """API para upload no YouTube de forma assíncrona"""
+    try:
+        data = request.get_json() or {}
+        publicar_imediato = data.get('publicar_imediato', False)
+        
+        # Inicia a tarefa Celery
+        task = upload_youtube_task.delay(video_id, publicar_imediato)
+        
+        return jsonify({
+            'status': 'success', 
+            'message': 'Upload para YouTube iniciado em segundo plano!',
+            'task_id': task.id,
+            'video_id': video_id
+        })
+            
+    except Exception as e:
+        return jsonify({
+            'status': 'error', 
+            'message': f'Erro ao iniciar upload: {str(e)}'
         }), 500
 
 @app.route('/api/videos/<int:video_id>/delete', methods=['DELETE'])
@@ -152,7 +240,52 @@ def api_delete_video(video_id):
             'status': 'error', 
             'message': f'Erro: {str(e)}'
         }), 500
+    
+@app.route('/api/videos/<int:video_id>/upload-youtube', methods=['POST'])
+def api_upload_youtube(video_id):
+    """API para iniciar upload assíncrono do vídeo para o YouTube"""
+    try:
+        data = request.get_json() or {}
+        publicar_imediato = data.get('publicar_imediato', False)
+        
+        print(f"📤 Iniciando upload assíncrono para YouTube - Vídeo: {video_id}")
+        print(f"🚀 Publicação imediata: {publicar_imediato}")
+        
+        # Inicia a tarefa Celery
+        task = upload_youtube_task.delay(video_id, publicar_imediato)
+        
+        return jsonify({
+            'status': 'success', 
+            'message': 'Upload iniciado em segundo plano!',
+            'task_id': task.id,
+            'roteiro_id': video_id
+        })
+            
+    except Exception as e:
+        print(f"❌ Erro ao iniciar upload: {e}")
+        return jsonify({
+            'status': 'error', 
+            'message': f'Erro ao iniciar upload: {str(e)}'
+        }), 500
 
+
+@app.route('/api/tasks/<string:task_id>/status')
+def api_task_status(task_id):
+    """API para verificar status de uma tarefa Celery"""
+    try:
+        # Usa a tarefa auxiliar para verificar status
+        result = check_task_status.delay(task_id)
+        task_info = result.get(timeout=5)  # Timeout de 5 segundos
+        
+        return jsonify(task_info)
+        
+    except Exception as e:
+        return jsonify({
+            'state': 'ERROR',
+            'status': f'Erro ao verificar tarefa: {str(e)}'
+        }), 500
+    
+    
 @app.route('/api/status')
 def api_status():
     """Status do sistema e banco"""
@@ -375,6 +508,13 @@ def get_videos_with_filters(filter_type='all', search=''):
             canal = db.canais.buscar_por_id(roteiro.canal_id)
             video_info = db.videos.buscar_por_roteiro_id(roteiro.id)
             
+            texto = roteiro.texto or ''
+            palavras_geradas = len(texto.split()) if texto else 0
+
+            # Estimativa simples considerando 150 palavras por minuto como média de narração
+            duracao_estimada = round(palavras_geradas / 150, 2) if palavras_geradas else None
+
+
             # ✅ CORREÇÃO: Verifica se o canal existe
             if not canal:
                 canal_nome = "Canal Não Encontrado"
@@ -398,6 +538,8 @@ def get_videos_with_filters(filter_type='all', search=''):
                 'canal_nome': canal_nome,
                 'canal_id': roteiro.canal_id,
                 'canal_obj': canal,  # ✅ Adiciona o objeto canal completo
+                'palavras_geradas': palavras_geradas if palavras_geradas else None,
+                'duracao_estimada_minutos': duracao_estimada if duracao_estimada else None,
                 'video_info': {
                     'arquivo_audio': video_info.arquivo_audio if video_info else None,
                     'arquivo_video': video_info.arquivo_video if video_info else None,
@@ -548,6 +690,15 @@ def api_gerenciar_agendamento(agendamento_id):
     except Exception as e:
         print(f"❌ Erro ao gerenciar agendamento: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.context_processor
+def utility_processor():
+    def remove_filter_url(filter_name):
+        args = request.args.copy()
+        args.pop(filter_name, None)
+        return url_for('list_videos', **args)
+    return dict(remove_filter_url=remove_filter_url)
+
 
 @app.route('/api/videos/<int:video_id>/agendamentos', methods=['DELETE'])
 def api_cancelar_todos_agendamentos(video_id):

@@ -14,7 +14,7 @@ class GeminiTextProvider(TextoProvider):
         if not self.api_key:
             raise ValueError("GEMINI_API_KEY não encontrada nas variáveis de ambiente")
         genai.configure(api_key=self.api_key)
-        self.model_name = model or "gemini-2.0-flash"
+        self.model_name = model or "gemini-2.5-flash"
 
     def generate(self, prompt: str, json_schema: Dict = None) -> Dict[str, Any]:
         """Gera texto com o Gemini usando JSON Schema"""

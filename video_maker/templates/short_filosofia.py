@@ -59,35 +59,10 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
             except Exception as e:
                 print(f"❌ Erro na legenda: {e}")
         
-        if srt_path.exists() and not Path("plano_final.json").exists():
-            print("🎬 Gerando plano de corte automático...")
-            subprocess.run(["python", "match_legenda_imagens.py", str(srt_path)], check=True)
-
-        plano_path = Path("plano_final.json")
-        if plano_path.exists():
-            with open(plano_path, 'r', encoding='utf-8') as f:
-                plano = json.load(f)
-            
-            # Extrair nomes dos arquivos do plano
-            arquivos_plano = [item['arquivo'] for item in plano]
-            
-            # Mapear para caminhos completos no diretório de imagens
-            imagens_selecionadas = []
-            for arquivo in arquivos_plano:
-                caminho_imagem = images_dir / arquivo.replace('.mp4', '.png')  # ou .png
-                if caminho_imagem.exists():
-                    imagens_selecionadas.append(str(caminho_imagem))
-                else:
-                    print(f"⚠️ Imagem não encontrada: {caminho_imagem}")
-            
-            if not imagens_selecionadas:
-                # Fallback para seleção aleatória
-                imagens = listar_imagens(images_dir)
-                random.shuffle(imagens)
-                imagens_selecionadas = imagens[:min(num_imagens, len(imagens))]
-        else:            
-            print('error do plano de corte.')
-
+        imagens = listar_imagens(images_dir)
+        random.shuffle(imagens)
+        imagens_selecionadas = imagens[:min(num_imagens, len(imagens))]    
+        
         capa_path = temp_dir / "capa_com_hook.png"
         if imagens_selecionadas:
             primeira_imagem = imagens_selecionadas[0]
@@ -109,9 +84,8 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
         # CAPA com efeito especial (3-4s ou 10% do áudio)
         duracao_capa = min(4.0, max(2.0, audio_duration * 0.10))
 
-        try:
-            print(f"🎬 [CAPA] zoom_pulse com hook ({duracao_capa:.1f}s)...")
-            capa_com_efeito = aplicar_efeito('zoom_pulse', str(capa_path), duracao_capa)
+        try:            
+            capa_com_efeito = aplicar_efeito('camera_instavel', str(capa_path), duracao_capa)
 
             if capa_com_efeito and hasattr(capa_com_efeito, 'filename') and Path(capa_com_efeito.filename).exists():
                 norm_capa = normalizar_duracao(capa_com_efeito.filename, duracao_capa, fps=fps)
@@ -267,9 +241,7 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
         ]
 
         # Executar render
-        try:
-            print("🔧 Comando FFmpeg:")
-            print(" ".join(cmd_final))
+        try:            
             result = subprocess.run(cmd_final, check=True, cwd=temp_dir, capture_output=True, text=True, timeout=600)
         except subprocess.CalledProcessError as e:
             print(f"❌ Erro no FFmpeg (xfade): {e}")

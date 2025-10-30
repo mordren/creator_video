@@ -1,5 +1,6 @@
 # crud/manager.py
 from crud.agendamento_manager import AgendamentoManager
+from crud.youtube_manager import YouTubeManager
 from .roteiro_manager import RoteiroManager
 from .video_manager import VideoManager
 from .canal_manager import CanalManager
@@ -12,6 +13,7 @@ class DatabaseManager:
         self.videos = VideoManager()
         self.canais = CanalManager()
         self.agendamentos = AgendamentoManager()  # NOVO
+        self.youtube = YouTubeManager()
 
     
     # Métodos de compatibilidade para código legado

@@ -19,7 +19,15 @@ app = Flask(__name__)
 app.config.update(
     CELERY_BROKER_URL=os.getenv('CELERY_BROKER_URL', 'redis://192.168.31.200:6379/0'),
     CELERY_RESULT_BACKEND=os.getenv('CELERY_RESULT_BACKEND', 'redis://192.168.31.200:6379/0'),
+    DEBUG=os.environ.get('FLASK_DEBUG', False),
+    TEMPLATES_AUTO_RELOAD=os.environ.get('FLASK_DEBUG', False),
+    SEND_FILE_MAX_AGE_DEFAULT=300,
+    JSONIFY_PRETTYPRINT_REGULAR=False  # Respostas JSON mais compactas
 )
+
+@app.route('/')
+def index():
+    return render_template('videos.html')
 
 # Importações do sistema existente
 try:
@@ -34,11 +42,6 @@ except ImportError as e:
 
 # Inicializa o gerenciador de banco
 db = DatabaseManager()
-
-@app.route('/')
-def index():
-    """Página inicial do sistema"""
-    return render_template('index.html')
 
 @app.route('/videos')
 def list_videos():
@@ -731,4 +734,9 @@ if __name__ == '__main__':
         print("❌ Problema com o banco de dados")
     
     # Iniciar servidor
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(
+        host='0.0.0.0', 
+        port=5000, 
+        debug=os.environ.get('FLASK_DEBUG', False),
+        threaded=True  # Permite múltiplas requisições simultâneas
+    )

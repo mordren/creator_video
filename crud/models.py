@@ -72,9 +72,16 @@ class Video(SQLModel, table=True):
     youtube: Optional["VideoYouTube"] = Relationship(back_populates="video")
     tiktok: Optional["VideoTikTok"] = Relationship(back_populates="video")
 
+# models.py - ATUALIZE a classe VideoYouTube
 class VideoYouTube(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     video_id: int = Field(foreign_key="video.id")
+    
+    # ID do vídeo no YouTube (NOVO CAMPO)
+    youtube_video_id: Optional[str] = Field(default=None, index=True)
+    
+    # Link do vídeo no YouTube (NOVO CAMPO)
+    link: Optional[str] = Field(default=None, sa_type=Text)
     
     # Timestamps
     hora_upload: Optional[datetime] = Field(default=None)
@@ -90,7 +97,7 @@ class VideoYouTube(SQLModel, table=True):
     tipo_conteudo: TipoConteudo = Field(default=TipoConteudo.SHORT)
     
     video: Video = Relationship(back_populates="youtube")
-
+    
 class VideoTikTok(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     video_id: int = Field(foreign_key="video.id")

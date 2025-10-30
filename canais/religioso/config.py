@@ -7,7 +7,7 @@ from pathlib import Path
 # -------------------------- Pastas -------------------------------------------------
 PASTA_BASE = Path(r"E:\Canal Religioso\roteiros")
 PASTA_CANAL = Path(r"C:\Users\mordren\Documents\creator\canais\Religioso")
-PASTA_VIDEOS = Path(r"E:\Canal Religioso\Vídeos")
+PASTA_VIDEOS = Path(r"G:\Regioso\Videos")
 VIDEOS_DIR = Path(r"C:\Users\mordren\Documents\creator\canais\Religioso\assets\videos")
 NOME = "Hope in Every Verse"
 LINK = "@hope_in_every_verse"

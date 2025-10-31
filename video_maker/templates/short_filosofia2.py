@@ -22,18 +22,13 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
     hook = roteiro.thumb
     num_imagens = int(config.get('num_imagens', 18))
 
-    dur_fade = float(config.get('duracao_transicao', 1.2))      # duração do xfade (s)
-    vfade    = float(config.get('fade_out_video', 0.8))         # fade-out vídeo final (s)
-    afade    = float(config.get('fade_out_audio', 0.8))         # fade-out áudio final (s)
-    full_on_min = float(config.get('min_full_on', 1.0))         # respiro "cheio" por clipe do meio
-    resp = float(config.get('respiro_entre_fades', 0.0))        # opcional: +respiro entre fades (0.0 desativa)
+    dur_fade = float(config.get('duracao_transicao', 1.2))    # duração do xfade (s)
+    vfade = float(config.get('fade_out_video', 0.8))          # fade-out vídeo no final (s)
+    afade = float(config.get('fade_out_audio', 0.8))          # fade-out áudio no final (s)
 
-    width  = int(config.get('largura', 720))
+    width = int(config.get('largura', 720))
     height = int(config.get('altura', 1280))
-    fps    = int(config.get('fps', 30))
-
-    # alvo manual (para testes). Se 0, usa duração do áudio
-    duracao_alvo_cfg = float(config.get("duracao_alvo", 0.0))
+    fps = int(config.get('fps', 30))
 
     output_dir, temp_dir = preparar_diretorios_trabalho(
         config.get('PASTA_VIDEOS') or config.get('output_dir', "./renders")
@@ -42,8 +37,9 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
     print(f"🎯 Hook: {hook}")
     print(f"📁 Imagens: {images_dir}")
     print(f"📁 Saída: {output_dir}")
-    print(f"✨ xfade: {dur_fade:.2f}s | 🌓 fade final: v={vfade:.2f}s a={afade:.2f}s | ⏱ full_on_min={full_on_min:.2f}s")
-    print(f"📐 {width}x{height} @ {fps}fps")
+    print(f"✨ Transição: xfade 'fade' ({dur_fade:.2f}s)")
+    print(f"🌓 Fade final: vídeo={vfade:.2f}s | áudio={afade:.2f}s")
+    print(f"📐 Tamanho: {width}x{height} @ {fps}fps")
 
     try:
         # ================== Coleta de entradas ==================
@@ -52,8 +48,7 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
             raise ValueError(f"Nenhuma imagem encontrada em: {images_dir}")
 
         audio_duration = get_media_duration(audio)
-        target_total = duracao_alvo_cfg if duracao_alvo_cfg > 0 else audio_duration
-        print(f"⏱️ Áudio: {audio_duration:.3f}s | 🎯 Alvo vídeo: {target_total:.3f}s")
+        print(f"⏱️ Duração do áudio: {audio_duration:.3f}s")
 
         # Legenda (SRT -> ASS)
         ass_path = temp_dir / "legenda.ass"
@@ -78,7 +73,7 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
         if imagens_selecionadas:
             primeira_imagem = imagens_selecionadas[0]
             gerar_capa_pillow(primeira_imagem, hook, capa_path)
-            print(f"📝 Capa com hook a partir: {Path(primeira_imagem).name}")
+            print(f"📝 Capa com hook gerada a partir de: {Path(primeira_imagem).name}")
 
         # ================== Preparação de saídas ==================
         video_id = audio.stem
@@ -87,8 +82,8 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
         clip_files = []
         clip_durations = []
 
-        # Capa: escolha fixa para estabilidade do timing
-        duracao_capa = float(config.get("duracao_capa", 3.0))
+        # Capa: 3–4s ou 10% do áudio
+        duracao_capa = min(4.0, max(2.0, audio_duration * 0.10))
 
         try:
             capa_com_efeito = aplicar_efeito('camera_instavel', str(capa_path), duracao_capa)
@@ -98,54 +93,51 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
                     destino = temp_dir / "capa_com_efeito.mp4"
                     shutil.copy2(norm, destino)
                     clip_files.append(destino)
-                    clip_durations.append(duracao_capa)
+                    clip_durations.append(float(duracao_capa))
                     Path(norm).unlink(missing_ok=True)
                     Path(capa_com_efeito.filename).unlink(missing_ok=True)
-                    print("✅ Capa com efeito criada")
+                    print("✅ Capa com hook e efeito criada")
         except Exception as e:
-            print(f"❌ Erro na capa com efeito: {e}")
+            print(f"❌ Erro na capa com hook: {e}")
+            # Fallback capa estática
             try:
                 fallback = temp_dir / "capa_estatica.mp4"
                 criar_frame_estatico(capa_path, duracao_capa, fallback)
                 clip_files.append(fallback)
-                clip_durations.append(duracao_capa)
+                clip_durations.append(float(duracao_capa))
                 print("✅ Fallback: capa estática criada")
             except Exception as e2:
-                print(f"❌ Fallback da capa falhou: {e2}")
+                print(f"❌ Fallback da capa também falhou: {e2}")
 
         # ================== Geração de clipes restantes ==================
-        tempo_restante = max(0.0, target_total - duracao_capa)  # usar alvo para testar manualmente durações maiores
+        tempo_restante = max(0.0, audio_duration - duracao_capa)
         imgs_restantes = imagens_selecionadas[1:] if len(imagens_selecionadas) > 1 else []
 
-        print(f"📊 Tempo restante alvo após capa: {tempo_restante:.3f}s")
+        print(f"📊 Tempo restante após capa: {tempo_restante:.3f}s")
         print(f"📊 Imagens restantes: {len(imgs_restantes)}")
 
         if imgs_restantes and tempo_restante > 0:
             n_total = len(imgs_restantes)
-
-            # base que fecha o total compensando os fades entre clipes
-            base = (tempo_restante + (n_total - 1) * dur_fade) / n_total
-
-            # garantir tempo "cheio" (sem sobreposição) em cada clipe do meio
-            min_meio = 2 * dur_fade + full_on_min
-            duracao_clip = max(base, min_meio)
-
-            print(f"🧮 duracao_clip={duracao_clip:.3f}s | base={base:.3f}s | min_meio={min_meio:.3f}s")
+            duracao_por_imagem = tempo_restante / n_total
+            full_on_min = float(config.get('min_full_on', 0.7))   
+            step_alvo = max(tempo_restante / n_total, dur_fade + full_on_min)
+            duracao_clip = max(step_alvo + dur_fade, 2*dur_fade + full_on_min)
+            print(f"🧮 step_alvo={step_alvo:.3f}s | duracao_clip={duracao_clip:.3f}s (min full-on={full_on_min:.3f}s)")
 
             efeitos = ['camera_instavel', 'pan', 'zoom_invertido', 'panoramica_vertical', 'zoom_pulse']
 
             for i, img in enumerate(imgs_restantes):
                 efeito = efeitos[i % len(efeitos)]
                 try:
-                    print(f"🎬 [{i+1}/{len(imgs_restantes)}] {Path(img).name} → {efeito} ({duracao_clip:.2f}s)")
-                    raw = aplicar_efeito(efeito, img, duracao_clip)
+                    print(f"🎬 [{i+1}/{len(imgs_restantes)}] {Path(img).name} → {efeito} ({duracao_por_imagem:.2f}s)")
+                    raw = aplicar_efeito(efeito, img, duracao_por_imagem)
                     if raw and hasattr(raw, 'filename') and Path(raw.filename).exists():
                         norm = normalizar_duracao(raw.filename, duracao_clip, fps=fps)
                         if norm and Path(norm).exists():
                             destino = temp_dir / f"clip_{i:03d}.mp4"
                             shutil.copy2(norm, destino)
                             clip_files.append(destino)
-                            clip_durations.append(duracao_clip)
+                            clip_durations.append(float(duracao_por_imagem))
                             Path(norm).unlink(missing_ok=True)
                             Path(raw.filename).unlink(missing_ok=True)
                 except Exception as e:
@@ -154,7 +146,7 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
                         destino = temp_dir / f"fallback_{i:03d}.mp4"
                         criar_frame_estatico(img, duracao_clip, destino)
                         clip_files.append(destino)
-                        clip_durations.append(duracao_clip)
+                        clip_durations.append(float(duracao_clip))
                         print(f"   ✅ Fallback estático criado")
                     except Exception as e2:
                         print(f"   ❌ Fallback também falhou: {e2}")
@@ -163,8 +155,9 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
             raise RuntimeError("Nenhum clipe foi gerado para montar o vídeo final.")
 
         total_video_sem_transicoes = sum(clip_durations)
-        print(f"📊 Soma das durações (sem sobreposição): {total_video_sem_transicoes:.3f}s")
-        print(f"📊 # de clipes: {len(clip_files)}")
+        print(f"📊 Duração total dos clipes (sem sobreposição): {total_video_sem_transicoes:.3f}s")
+        print(f"📊 Duração do áudio: {audio_duration:.3f}s")
+        print(f"📊 Número de clipes: {len(clip_files)}")
 
         # ================== Render final com xfade ==================
         print("🎥 Montando com transições (xfade)...")
@@ -204,49 +197,53 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
                 f"fps={fps},format=yuv420p[v{i}]"
             )
 
-        # 2) Encadeamento xfade com OFFSETS CUMULATIVOS CORRETOS (+resp opcional)
-        current = "[v0]"
-        fc_xfade = []
-        if len(clip_files) > 1:
-            offset_total = max(0.0, clip_durations[0] - dur_fade + resp)  # 1º offset
-            for i in range(1, len(clip_files)):
-                out_lbl = f"[x{i}]"
-                fc_xfade.append(
-                    f"{current}[v{i}]xfade=transition=fade:duration={dur_fade:.3f}:offset={offset_total:.3f}{out_lbl}"
-                )
-                current = out_lbl
-                if i < len(clip_files) - 1:
-                    offset_total += clip_durations[i] - dur_fade + resp
-        fc_parts += fc_xfade
+        # 2) Offsets corretos para xfade (modelo acumulado: começa em dur0 - dur_fade)
+        offsets = []
+        off = max(0.0, clip_durations[0] - dur_fade)  
+        offsets.append(round(off, 3))
+        for i in range(1, len(clip_durations)-1):
+            off += clip_durations[i] - dur_fade
+            offsets.append(round(off, 3))
 
-        # 3) Comprimento do vídeo antes do padding
+        # 3) Encadeamento xfade
+        current = "[v0]"
+        for i in range(1, len(clip_files)):
+            out = f"[x{i}]"
+            fc_parts.append(
+                f"{current}[v{i}]xfade=transition=fade:"
+                f"duration={dur_fade:.3f}:offset={offsets[i-1]:.3f}{out}"
+            )
+            current = out
+
+        # 4) Comprimento de vídeo resultante antes do tpad
         if len(clip_files) == 1:
             video_len = clip_durations[0]
         else:
-            # fim real = último offset acumulado + duração do último clipe
-            video_len = offset_total + clip_durations[-1]
-        print(f"⏱️ Comprimento antes do padding: {video_len:.3f}s")
+            # fim real = último offset + duração do último clipe (porque o xfade começa em offset)
+            video_len = offsets[-1] + clip_durations[-1]
 
-        # 4) tpad para atingir o alvo (áudio ou duracao_alvo)
-        pad = max(0.0, target_total - video_len)
-        if pad > 0.0005:
-            print(f"🧩 tpad: +{pad:.3f}s para atingir {target_total:.3f}s")
-            fc_parts.append(f"{current}tpad=stop_duration={pad:.3f}[vpad]")
-            current = "[vpad]"
+        # 5) tpad (AQUI entra o tpad) para completar até o fim do áudio, se faltar vídeo
+        delta_pad = audio_duration - video_len
+        if delta_pad > 0.2:
+            print(f"🧩 Aplicando tpad extra de {delta_pad:.3f}s para igualar ao áudio")
+            fc_parts.append(f"{current}tpad=stop_duration={delta_pad:.3f}[vfinal]")
+            current = "[vfinal]"
 
-        # 5) Fades finais (calculados pelo alvo)
-        st_v = max(0.0, target_total - vfade)
-        st_a = max(0.0, target_total - afade)
+        # 6) Fade-out NO FINAL (calcular st_v e st_a AGORA, depois do tpad)
+        #    Queremos que o fade aconteça nos últimos vfade/afade segundos do ÁUDIO.
+        st_v = max(0.0, audio_duration - float(config.get('fade_out_video', 0.8)))
+        st_a = max(0.0, audio_duration - float(config.get('fade_out_audio', 0.8)))
 
+        # 7) Legendas + fade de VÍDEO (se quiser que a legenda NÃO fade, inverta a ordem: fade antes do ass)
         video_in = current.strip("[]")
         if tem_legenda:
             fc_parts.append(f"[{video_in}]ass=legenda.ass[vs]")
-            fc_parts.append(f"[vs]fade=t=out:st={st_v:.3f}:d={vfade:.3f},format=yuv420p[vout]")
+            fc_parts.append(f"[vs]fade=t=out:st={st_v:.3f}:d={float(config.get('fade_out_video', 0.8)):.3f},format=yuv420p[vout]")
         else:
-            fc_parts.append(f"[{video_in}]fade=t=out:st={st_v:.3f}:d={vfade:.3f},format=yuv420p[vout]")
+            fc_parts.append(f"[{video_in}]fade=t=out:st={st_v:.3f}:d={float(config.get('fade_out_video', 0.8)):.3f},format=yuv420p[vout]")
 
-        # Áudio fade-out no fim
-        fc_parts.append(f"[{len(clip_files)}:a]afade=t=out:st={st_a:.3f}:d={afade:.3f}[aout]")
+        # 8) Fade-out de ÁUDIO (aplicado ao input de áudio que é o último input)
+        fc_parts.append(f"[{len(clip_files)}:a]afade=t=out:st={st_a:.3f}:d={float(config.get('fade_out_audio', 0.8)):.3f}[aout]")
 
         filter_complex = "; ".join(fc_parts)
 
@@ -263,20 +260,31 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
             str(output_path)
         ]
 
+
         print("🎬 Executando FFmpeg...")
         print(f"🔧 Filter complex: {filter_complex}")
 
         # Execução
-        subprocess.run(cmd_final, check=True, cwd=temp_dir)
+        try:
+            subprocess.run(cmd_final, check=True, cwd=temp_dir)
+        except subprocess.CalledProcessError as e:
+            print("❌ Erro no FFmpeg.")
+            # Mostra um trecho do erro para debug rápido
+            try:
+                # Quando capture_output=False, stderr não está em e.stderr. Mantemos simples:
+                pass
+            except Exception:
+                pass
+            raise
 
         # Verificação final
         if output_path.exists():
             dur_out = get_media_duration(output_path)
             print(f"✅ Vídeo final gerado: {output_path}")
-            print(f"⏱️ Duração (vídeo): {dur_out:.3f}s | 🎯 Alvo: {target_total:.3f}s")
+            print(f"⏱️ Duração (vídeo): {dur_out:.3f}s | ⏱️ Áudio (orig): {audio_duration:.3f}s")
             print(f"🔗 Clipes: {len(clip_files)} | ✨ Transições: {max(0, len(clip_files)-1)} xfade(s) de {dur_fade:.2f}s")
-            if abs(dur_out - target_total) > 1.0:
-                print("⚠️ Diferença >1s: confira duracao_clip/resp/tpad.")
+            if abs(dur_out - audio_duration) > 1.0:
+                print("⚠️ Aviso: pequena diferença entre duração do áudio e do vídeo. Confira o tpad/fades.")
             return output_path
         else:
             raise RuntimeError("Vídeo final não foi criado.")

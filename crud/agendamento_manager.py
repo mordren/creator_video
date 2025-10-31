@@ -3,7 +3,7 @@ from typing import List, Optional
 from datetime import datetime
 import json
 
-from .models import Agendamento
+from .models import Agendamento, AgendamentoExecutado
 from .connection import engine
 
 class AgendamentoManager:
@@ -63,3 +63,11 @@ class AgendamentoManager:
                 session.delete(agendamento)
             session.commit()
             return True
+        
+    def buscar_historico_por_video_id(self, video_id: int) -> List[AgendamentoExecutado]:
+        """Busca histórico de agendamentos executados por vídeo"""
+        with Session(self.engine) as session:
+            statement = select(AgendamentoExecutado).where(
+                AgendamentoExecutado.roteiro_id == video_id
+            ).order_by(AgendamentoExecutado.data_execucao.desc())
+            return session.exec(statement).all()

@@ -49,7 +49,7 @@ class AudioSystem:
         roteiro = self.roteiro_manager.buscar_por_id(roteiro_id)
         if not roteiro:
             print(f"❌ Roteiro com ID {roteiro_id} não encontrado")
-            return False
+            pass
         
         # Busca canal para obter configuração
         canal = self.canal_manager.buscar_por_id(roteiro.canal_id)
@@ -69,7 +69,12 @@ class AudioSystem:
             print(f"❌ Arquivo não encontrado: {arquivo_json}")
             return False
         
-        with open(arquivo_json, 'r', encoding='utf-8') as f:
+        if arquivo_json.exists():
+            with open(arquivo_json, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        else:
+            data = {}
+        
             data = json.load(f)
         
         # Extrai texto
@@ -85,17 +90,17 @@ class AudioSystem:
         print(f"📝 {len(text)} chars | 🔊 {provider} | 📺 {data.get('titulo', 'Sem título')}")
         print(f"📁 Pasta: {pasta_video}")
                 
+                # Verifica se é short (vertical) antes de otimizar        
+        resolucao = data.get('resolucao', config.get('RESOLUCAO', '1920x1080'))
+        is_short = (vertical_horizontal(resolucao) == "vertical")
+
         tts = create_tts_provider(provider)
-        success = tts.sintetizar(text, audio_file, config)
+        success = tts.sintetizar(text, audio_file, config, is_short)
         
         # ✅ MODIFICADO: Otimizar áudio APENAS para shorts (vídeos verticais)
         srt_file = None
         if provider == "edge" and config.get('EDGE_TTS_LEGENDAS', False):
             srt_file = Path(audio_file).with_suffix('.srt')
-        
-        # Verifica se é short (vertical) antes de otimizar
-        resolucao = data.get('resolucao', config.get('RESOLUCAO', '1920x1080'))
-        is_short = (vertical_horizontal(resolucao) == "vertical")
         
         if success and audio_file.exists() and is_short:
             print("🎵 Otimizando áudio para short (cortando pausas longas)...")
@@ -107,11 +112,15 @@ class AudioSystem:
                 if srt_ajustado:
                     srt_file = Path(srt_ajustado)
         elif success and audio_file.exists() and not is_short:
+
             print("ℹ️  Otimização de áudio skipped (não é short)")
         
         # ✅ CORRIGIDO: Mixar com música de fundo com nome correto
         arquivo_mixado = pasta_video / f"{roteiro.id_video}_com_musica.mp3"
-        musica_path = config.get('MUSICA')
+        if is_short:
+            musica_path = config.get('MUSICA_SHORT')
+        else:
+            musica_path = config.get('MUSICA_LONG')
         
         if musica_path and Path(musica_path).exists():
             print("🎵 Mixando áudio com música...")
@@ -121,7 +130,7 @@ class AudioSystem:
                 arquivo_mixado.unlink()
                 
             # Chama a função de mixagem
-            mixado_temp = mixar_audio_com_musica(audio_file, musica_path)
+            mixado_temp = mixar_audio_com_musica(audio_file, musica_path, ganho_musica=-25)
             
             # ✅ CORREÇÃO: Renomeia para o nome padrão se necessário
             if mixado_temp != str(arquivo_mixado):

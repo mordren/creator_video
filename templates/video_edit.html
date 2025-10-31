@@ -1,0 +1,461 @@
+{% extends "base.html" %}
+
+{% block title %}Editar {{ roteiro.titulo }} - Sistema de Vídeos{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-video me-2"></i>{{ roteiro.titulo }}</h1>
+    <div class="d-flex">
+        <a href="{{ url_for('video_uploads', roteiro_id=roteiro.id) }}" class="btn btn-outline-info ms-2">
+            <i class="fas fa-upload me-2"></i>Uploads
+        </a>
+    </div>
+</div>
+<!-- IMPORTANTE: usar URL literal para evitar 500 no GET caso endpoint mude de nome -->
+<form id="videoForm" method="POST" action="/api/videos/{{ roteiro.id }}/update">
+<div class="row">
+    <!-- Informações Editáveis -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-edit me-2"></i>Editar Informações</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="titulo" class="form-label"><strong>Título *</strong></label>
+                    <input type="text" class="form-control" id="titulo" name="titulo"
+                           value="{{ roteiro.titulo }}" required maxlength="100">
+                    <div class="form-text">Máximo 100 caracteres</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="descricao" class="form-label"><strong>Descrição</strong></label>
+                    <textarea class="form-control" id="descricao" name="descricao"
+                              rows="4" maxlength="5000">{{ roteiro.descricao or '' }}</textarea>
+                    <div class="form-text">Máximo 5000 caracteres</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="tags" class="form-label"><strong>Tags</strong></label>
+                    <textarea class="form-control" id="tags" name="tags"
+                              rows="3" placeholder="Separe as tags por vírgula">{{ roteiro.tags or '' }}</textarea>
+                    <div class="form-text">Separe as tags por vírgula. Ex: filosofia, educação, pensamento</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="texto" class="form-label"><strong>Texto Completo</strong></label>
+                    <textarea class="form-control" id="texto" name="texto"
+                              rows="8" style="font-family: monospace;">{{ roteiro.texto or '' }}</textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label for="thumb" class="form-label"><strong>Thumbnail/Hook</strong></label>
+                    <input type="text" class="form-control" id="thumb" name="thumb"
+                           value="{{ roteiro.thumb or '' }}">
+                    <div class="form-text">Texto que aparece na capa do vídeo</div>
+                </div>
+
+                <!-- Removidos campos que não existem no modelo -->
+
+                <div class="mb-3">
+                    <label for="resolucao" class="form-label"><strong>Resolução</strong></label>
+                    <select class="form-select" id="resolucao" name="resolucao">
+                        <option value="">Selecione a resolução</option>
+                        <option value="1080p" {% if roteiro.resolucao == '1080p' %}selected{% endif %}>1080p (Full HD)</option>
+                        <option value="720p"  {% if roteiro.resolucao == '720p'  %}selected{% endif %}>720p (HD)</option>
+                        <option value="480p"  {% if roteiro.resolucao == '480p'  %}selected{% endif %}>480p (SD)</option>
+                        <option value="360p"  {% if roteiro.resolucao == '360p'  %}selected{% endif %}>360p</option>
+                        <option value="vertical" {% if roteiro.resolucao == 'vertical' %}selected{% endif %}>vertical</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metadados e Ações -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-cog me-2"></i>Metadados</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>ID Interno:</span>
+                        <strong>{{ roteiro.id_video }}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Canal:</span>
+                        <strong>{{ roteiro.canal_nome }}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Data de Criação:</span>
+                        <strong>
+                            {% if roteiro.data_criacao %}
+                                {% if roteiro.data_criacao is string %}
+                                    {{ roteiro.data_criacao[:10] }}
+                                {% else %}
+                                    {{ roteiro.data_criacao.strftime('%d/%m/%Y') }}
+                                {% endif %}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </strong>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Card Status -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-chart-bar me-2"></i>Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Áudio Gerado:</strong>
+                    <span class="badge {% if roteiro.audio_gerado %}bg-success{% else %}bg-danger{% endif %} float-end">
+                        {% if roteiro.audio_gerado %}Sim{% else %}Não{% endif %}
+                    </span>
+                </div>
+                <div class="mb-3">
+                    <strong>Vídeo Gerado:</strong>
+                    <span class="badge {% if roteiro.video_gerado %}bg-success{% else %}bg-danger{% endif %} float-end">
+                        {% if roteiro.video_gerado %}Sim{% else %}Não{% endif %}
+                    </span>
+                </div>
+                <div class="mb-3">
+                    <strong>Finalizado:</strong>
+                    <span class="badge {% if roteiro.finalizado %}bg-success{% else %}bg-warning{% endif %} float-end">
+                        {% if roteiro.finalizado %}Sim{% else %}Não{% endif %}
+                    </span>
+                </div>
+
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input type="checkbox" class="form-check-input" id="audio_gerado" name="audio_gerado"
+                               {% if roteiro.audio_gerado %}checked{% endif %}>
+                        <label for="audio_gerado" class="form-check-label">Áudio Gerado</label>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input type="checkbox" class="form-check-input" id="video_gerado" name="video_gerado"
+                               {% if roteiro.video_gerado %}checked{% endif %}>
+                        <label for="video_gerado" class="form-check-label">Vídeo Gerado</label>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input type="checkbox" class="form-check-input" id="finalizado" name="finalizado"
+                               {% if roteiro.finalizado %}checked{% endif %}>
+                        <label for="finalizado" class="form-check-label">Marcar como Finalizado</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card Uploads (YouTube manual integrado) -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fab fa-youtube me-2 text-danger"></i>Uploads (YouTube)
+                </h5>
+                <small id="youtube-stats" class="text-muted"></small>
+            </div>
+            <div class="card-body">
+                <div class="progress mb-3" style="height: 6px;">
+                    <div id="upload-progress" class="progress-bar" role="progressbar" style="width: 0%;"></div>
+                </div>
+                <div id="youtube-info-container">
+                    <div class="text-center text-muted py-3">
+                        <i class="fab fa-youtube fa-2x mb-2"></i>
+                        <p>Nenhum upload registrado</p>
+                        <button class="btn btn-outline-primary" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#youtubeModal">
+                            <i class="fas fa-plus me-2"></i>Registrar Manualmente
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ações -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-play me-2"></i>Ações</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Salvar Alterações
+                    </button>
+
+                    {% if not roteiro.audio_gerado %}
+                    <button type="button" class="btn btn-warning generate-audio" data-video-id="{{ roteiro.id }}">
+                        <i class="fas fa-music me-2"></i>Gerar Áudio
+                    </button>
+                    {% endif %}
+
+                    {% if roteiro.audio_gerado and not roteiro.video_gerado %}
+                    <button type="button" class="btn btn-info generate-video" data-video-id="{{ roteiro.id }}">
+                        <i class="fas fa-film me-2"></i>Gerar Vídeo
+                    </button>
+                    {% endif %}
+
+                    {% if roteiro.video_gerado %}
+                    <button type="button" class="btn btn-success upload-youtube" data-video-id="{{ roteiro.id }}">
+                        <i class="fab fa-youtube me-2"></i>Upload YouTube
+                    </button>
+                    {% endif %}
+
+                    <button type="button" class="btn btn-danger delete-video" data-video-id="{{ roteiro.id }}">
+                        <i class="fas fa-trash me-2"></i>Excluir Vídeo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</form>
+
+<!-- Modal de Upload Confirm -->
+<div class="modal fade" id="modalUploadConfirm" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fab fa-youtube me-2 text-danger"></i>
+                    Upload para YouTube
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Atenção:</strong> Nenhum agendamento encontrado.
+                </div>
+                <p>Deseja publicar este vídeo imediatamente no YouTube?</p>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="publicar_agora">
+                    <label class="form-check-label" for="publicar_agora">
+                        <strong>Publicar como público agora</strong>
+                    </label>
+                </div>
+                <div class="form-text">
+                    Se não marcar esta opção, o vídeo será enviado como "Privado" e você poderá publicar manualmente depois.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btn-confirm-upload">
+                    <i class="fas fa-upload me-2"></i>Fazer Upload
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Agendamento -->
+<div class="modal fade" id="modalAgendamento" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-calendar-plus me-2"></i>
+                    Agendar Publicação
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="form-agendamento">
+                    <input type="hidden" id="agendamento_id" value="">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Plataformas *</label>
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="platform_tiktok" value="tiktok">
+                                    <label class="form-check-label" for="platform_tiktok">
+                                        <i class="fab fa-tiktok me-2"></i>TikTok
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="platform_youtube" value="youtube">
+                                    <label class="form-check-label" for="platform_youtube">
+                                        <i class="fab fa-youtube me-2 text-danger"></i>YouTube
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="data_publicacao" class="form-label">Data de Publicação *</label>
+                        <input type="date" class="form-control" id="data_publicacao" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="hora_publicacao" class="form-label">Horário de Publicação *</label>
+                        <input type="time" class="form-control" id="hora_publicacao" required value="18:00">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Configurações Avançadas</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="agendamento_recorrente">
+                            <label class="form-check-label" for="agendamento_recorrente">
+                                Agendamento recorrente
+                            </label>
+                        </div>
+                        <div class="form-text">
+                            Publicar automaticamente em todos os dias da semana no mesmo horário
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Dicas de Horário:</strong>
+                        <ul class="mb-0 mt-2 small">
+                            <li><strong>TikTok:</strong> 18h-21h (alto engajamento)</li>
+                            <li><strong>YouTube:</strong> 14h-16h (melhor performance)</li>
+                            <li>Evite publicar entre 2h e 6h da manhã</li>
+                        </ul>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btn-cancelar-agendamento" style="display: none;">
+                    <i class="fas fa-times me-2"></i>Cancelar Agendamento
+                </button>
+                <button type="button" class="btn btn-success" id="btn-salvar-agendamento">
+                    <i class="fas fa-save me-2"></i>Salvar Agendamento
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Upload Manual (YouTube) -->
+<div class="modal fade" id="youtubeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="youtubeForm" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fab fa-youtube me-2 text-danger"></i>Registrar Upload YouTube</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="youtube_id" name="youtube_id" value="">
+        <input type="hidden" name="roteiro_id" value="{{ roteiro.id }}">
+        <div class="mb-3">
+          <label for="youtube_link" class="form-label">Link *</label>
+          <input type="url" class="form-control" id="youtube_link" name="link" required placeholder="https://youtu.be/xxxx">
+        </div>
+        <div class="row">
+          <div class="col-md-6">
+            <label for="hora_upload" class="form-label">Upload *</label>
+            <input type="datetime-local" class="form-control" id="hora_upload" name="hora_upload" required>
+          </div>
+          <div class="col-md-6">
+            <label for="hora_estreia" class="form-label">Estreia</label>
+            <input type="datetime-local" class="form-control" id="hora_estreia" name="hora_estreia">
+          </div>
+        </div>
+        <div class="row mt-3">
+          <div class="col-4">
+            <label for="visualizacoes" class="form-label">Views</label>
+            <input type="number" class="form-control" id="visualizacoes" name="visualizacoes" value="0" min="0">
+          </div>
+          <div class="col-4">
+            <label for="likes" class="form-label">Likes</label>
+            <input type="number" class="form-control" id="likes" name="likes" value="0" min="0">
+          </div>
+          <div class="col-4">
+            <label for="comentarios" class="form-label">Comentários</label>
+            <input type="number" class="form-control" id="comentarios" name="comentarios" value="0" min="0">
+          </div>
+        </div>
+        <div class="mt-3">
+          <label class="form-label">Tipo</label>
+          <select class="form-select" id="tipo_conteudo" name="tipo_conteudo">
+            <option value="long">Longo</option>
+            <option value="short">Short</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-success" type="submit"><i class="fas fa-save me-2"></i>Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Informações de Arquivos -->
+{% if roteiro.video_info %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-file me-2"></i>Arquivos Gerados</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% if roteiro.video_info.arquivo_audio %}
+                    <div class="col-md-6 mb-3">
+                        <strong>Áudio Original:</strong>
+                        <div class="text-truncate">
+                            <i class="fas fa-file-audio text-success me-2"></i>
+                            {{ roteiro.video_info.arquivo_audio }}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if roteiro.video_info.audio_mixado %}
+                    <div class="col-md-6 mb-3">
+                        <strong>Áudio Mixado:</strong>
+                        <div class="text-truncate">
+                            <i class="fas fa-music text-primary me-2"></i>
+                            {{ roteiro.video_info.audio_mixado }}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if roteiro.video_info.arquivo_video %}
+                    <div class="col-md-6 mb-3">
+                        <strong>Vídeo:</strong>
+                        <div class="text-truncate">
+                            <i class="fas fa-film text-info me-2"></i>
+                            {{ roteiro.video_info.arquivo_video }}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if roteiro.video_info.arquivo_legenda %}
+                    <div class="col-md-6 mb-3">
+                        <strong>Legenda:</strong>
+                        <div class="text-truncate">
+                            <i class="fas fa-closed-captioning text-warning me-2"></i>
+                            {{ roteiro.video_info.arquivo_legenda }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/video_edit.js') }}"></script>
+{% endblock %}
+
+
+{% endblock %}

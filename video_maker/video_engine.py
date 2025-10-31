@@ -93,6 +93,13 @@ except Exception as e:
 
 
 try:
+    registrar_template('long_estatico', 'video_maker.templates.long_estatico')
+    print("✅ Template long_estatico registrado")
+except Exception as e:
+    print(f"⚠️ Não foi possível registrar long_filosofia: {e}")
+
+
+try:
     registrar_template('long_filosofia', 'video_maker.templates.long_filosofia')
     print("✅ Template long_filosofia registrado")
 except Exception as e:

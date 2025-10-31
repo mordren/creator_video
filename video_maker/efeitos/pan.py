@@ -6,17 +6,16 @@ def criar_video_pan(img_path: str, temp: float):
     Path('./renders/temp/').mkdir(parents=True, exist_ok=True)
     nome_base = os.path.splitext(os.path.basename(img_path))[0]
     saida = os.path.join('./renders/temp/', f"{nome_base}_camera_pan.mp4")
-
+    total_frames = int(temp * 60)
     filtro = (
-        "[0:v]"
+        f"[0:v]"
         "scale=720:-1:force_original_aspect_ratio=decrease,"
         "pad=720:1280:(720-iw)/2:(1280-ih)/2,"
         "split=2[bg][src];"
         "[bg]gblur=sigma=32[blur];"
-        "[src]"
-        "zoompan=z='pow(1.015, on)':"
-        "x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
-        "d=1:s=720x1280:fps=60[sharp];"
+        f"[src]zoompan=z='pow(1.01, on)':"
+        f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
+        f"d={total_frames}:s=720x1280:fps=60[sharp];"
         "[blur][sharp]overlay=(W-w)/2:(H-h)/2,"
         "vignette=PI/3:eval=frame"
     )

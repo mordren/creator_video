@@ -164,6 +164,25 @@ def criar_frame_estatico(imagem_path: Path, duracao: float, output_path: Path):
     subprocess.run(cmd, check=True, capture_output=True)
     return output_path
 
+def criar_frame_estatico_long(imagem_path: Path, duracao: float, output_path: Path):
+    """Cria um vídeo com frame estático a partir de uma imagem"""
+    cmd = [
+        "ffmpeg", "-y",
+        "-loop", "1",
+        "-i", str(imagem_path),
+        "-t", str(duracao),
+        "-r", "30",
+        "-vf", "scale=1280:720:force_original_aspect_ratio=decrease:flags=lanczos,pad=1280:720:(ow-iw)/2:(oh-ih)/2:color=black",
+        "-c:v", "libx264",
+        "-preset", "veryfast",
+        "-crf", "21",
+        "-pix_fmt", "yuv420p",
+        str(output_path)
+    ]
+    subprocess.run(cmd, check=True, capture_output=True)
+    return output_path
+
+
 def normalizar_duracao(in_path, target_s, fps=30):
     """Normaliza a duração de um vídeo para o tempo exato"""
     in_path = Path(in_path)
@@ -309,7 +328,7 @@ def gerarCapaPNG(imagem, titulo, w=720, h=1280, usar_fontfile=False, fontfile_pa
 # FUNÇÕES DE ÁUDIO
 # =============================================================================
 
-def mixar_audio_com_musica(audio_voz, musica_path, ganho_musica=-15):
+def mixar_audio_com_musica(audio_voz, musica_path, ganho_musica=-19):
     """Mixa áudio de voz com música de fundo"""
     audio_path = Path(audio_voz)
     musica = Path(musica_path)

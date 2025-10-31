@@ -74,7 +74,11 @@
                         <span>Data de Criação:</span>
                         <strong>
                             {% if video.data_criacao %}
-                                {{ video.data_criacao[:10] }}
+                                {% if video.data_criacao is string %}
+                                    {{ video.data_criacao[:10] }}
+                                {% else %}
+                                    {{ video.data_criacao.strftime('%d/%m/%Y') }}
+                                {% endif %}
                             {% else %}
                                 N/A
                             {% endif %}
@@ -214,66 +218,6 @@
     </div>
 </div>
 
-<div class="modal fade" id="modalUploadProgress" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fab fa-youtube me-2 text-danger"></i>
-                    Upload para YouTube
-                </h5>
-            </div>
-            <div class="modal-body">
-                <div id="upload-progress-content">
-                    <div class="text-center">
-                        <div class="spinner-border text-primary mb-3" role="status">
-                            <span class="visually-hidden">Carregando...</span>
-                        </div>
-                        <p id="upload-status">Iniciando upload...</p>
-                    </div>
-                    
-                    <div class="progress mb-3" style="height: 20px;">
-                        <div id="upload-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" 
-                             role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-                            <span id="upload-progress-text">0%</span>
-                        </div>
-                    </div>
-                    
-                    <div class="alert alert-info small">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>Upload em andamento:</strong> Esta operação pode levar vários minutos. 
-                        Você pode fechar esta janela que o processo continuará em segundo plano.
-                    </div>
-                </div>
-                
-                <div id="upload-success" style="display: none;">
-                    <div class="alert alert-success text-center">
-                        <i class="fas fa-check-circle fa-2x mb-3"></i>
-                        <h5>Upload Concluído!</h5>
-                        <p id="success-message" class="mb-0">Vídeo enviado com sucesso para o YouTube.</p>
-                    </div>
-                </div>
-                
-                <div id="upload-error" style="display: none;">
-                    <div class="alert alert-danger text-center">
-                        <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
-                        <h5>Erro no Upload</h5>
-                        <p id="error-message" class="mb-0">Ocorreu um erro durante o upload.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="btn-close-progress">Fechar</button>
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="btn-reload-page" style="display: none;">
-                    <i class="fas fa-redo me-2"></i>Recarregar Página
-                </button>
-                <button type="button" class="btn btn-warning" id="btn-retry-upload" style="display: none;">
-                    <i class="fas fa-sync me-2"></i>Tentar Novamente
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Modal de Agendamento -->
 <div class="modal fade" id="modalAgendamento" tabindex="-1">
@@ -674,14 +618,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-// ✅ FUNÇÃO DE UPLOAD PARA YOUTUBE (COM CELERY)
-document.querySelector('.upload-youtube')?.addEventListener('click', function() {
+    document.querySelector('.upload-youtube')?.addEventListener('click', function() {
     const videoId = this.getAttribute('data-video-id');
     iniciarUploadYouTube(videoId);
 });
-
-let currentTaskId = null;
-let pollInterval = null;
 
 function iniciarUploadYouTube(videoId) {
     console.log(`🎬 Iniciando upload para YouTube do vídeo ID: ${videoId}`);
@@ -697,7 +637,7 @@ function iniciarUploadYouTube(videoId) {
             if (agendamentoYouTube) {
                 // Se há agendamento, confirma e faz upload
                 if (confirm(`Este vídeo está agendado para ${agendamentoYouTube.data_publicacao} às ${agendamentoYouTube.hora_publicacao}. Deseja prosseguir com o upload agendado?`)) {
-                    iniciarUploadCelery(videoId, false);
+                    fazerUploadYouTube(videoId, false); // false = não é upload imediato
                 }
             } else {
                 // Se não há agendamento, mostra modal de confirmação
@@ -707,7 +647,7 @@ function iniciarUploadYouTube(videoId) {
                 // Configurar o botão de confirmação
                 document.getElementById('btn-confirm-upload').onclick = function() {
                     const publicarAgora = document.getElementById('publicar_agora').checked;
-                    iniciarUploadCelery(videoId, publicarAgora);
+                    fazerUploadYouTube(videoId, publicarAgora);
                     modal.hide();
                 };
             }
@@ -716,20 +656,19 @@ function iniciarUploadYouTube(videoId) {
             console.error('Erro ao verificar agendamentos:', error);
             // Em caso de erro, pergunta se quer fazer upload imediato
             if (confirm('Erro ao verificar agendamentos. Deseja fazer upload imediato?')) {
-                iniciarUploadCelery(videoId, true);
+                fazerUploadYouTube(videoId, true);
             }
         });
 }
 
-function iniciarUploadCelery(videoId, publicarImediatamente) {
+function fazerUploadYouTube(videoId, publicarImediatamente) {
     const btn = document.querySelector('.upload-youtube');
     const originalText = btn.innerHTML;
     
-    // Mostrar loading no botão
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Iniciando...';
+    // Mostrar loading
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enviando...';
     btn.disabled = true;
     
-    // Iniciar a tarefa Celery
     fetch(`/api/videos/${videoId}/upload-youtube`, {
         method: 'POST',
         headers: {
@@ -742,16 +681,9 @@ function iniciarUploadCelery(videoId, publicarImediatamente) {
     .then(response => response.json())
     .then(data => {
         if (data.status === 'success') {
-            // Tarefa iniciada com sucesso
-            currentTaskId = data.task_id;
-            console.log(`✅ Tarefa Celery iniciada: ${currentTaskId}`);
-            
-            // Mostrar modal de progresso
-            mostrarModalProgresso();
-            
-            // Iniciar polling do status
-            iniciarPollingStatus();
-            
+            alert('✅ ' + data.message);
+            // Recarregar a página para atualizar status
+            location.reload();
         } else {
             alert('❌ ' + data.message);
             btn.innerHTML = originalText;
@@ -759,139 +691,12 @@ function iniciarUploadCelery(videoId, publicarImediatamente) {
         }
     })
     .catch(error => {
-        console.error('Erro ao iniciar upload:', error);
-        alert('❌ Erro ao iniciar upload para YouTube');
+        console.error('Erro no upload:', error);
+        alert('❌ Erro ao fazer upload para YouTube');
         btn.innerHTML = originalText;
         btn.disabled = false;
     });
 }
-
-function mostrarModalProgresso() {
-    const modal = new bootstrap.Modal(document.getElementById('modalUploadProgress'));
-    modal.show();
-    
-    // Resetar o modal
-    document.getElementById('upload-progress-content').style.display = 'block';
-    document.getElementById('upload-success').style.display = 'none';
-    document.getElementById('upload-error').style.display = 'none';
-    document.getElementById('btn-reload-page').style.display = 'none';
-    document.getElementById('btn-retry-upload').style.display = 'none';
-    document.getElementById('btn-close-progress').style.display = 'block';
-    
-    atualizarProgresso(0, 'Iniciando upload...');
-}
-
-function iniciarPollingStatus() {
-    // Limpar intervalo anterior se existir
-    if (pollInterval) {
-        clearInterval(pollInterval);
-    }
-    
-    // Verificar status a cada 2 segundos
-    pollInterval = setInterval(() => {
-        if (!currentTaskId) return;
-        
-        fetch(`/api/tasks/${currentTaskId}/status`)
-            .then(response => response.json())
-            .then(data => {
-                console.log('Status da tarefa:', data);
-                
-                if (data.state === 'PROGRESS') {
-                    // Atualizar progresso
-                    const percent = Math.round((data.current / data.total) * 100);
-                    atualizarProgresso(percent, data.status);
-                    
-                } else if (data.state === 'SUCCESS') {
-                    // Upload concluído com sucesso
-                    clearInterval(pollInterval);
-                    uploadConcluido(true, data.result?.message || 'Upload concluído com sucesso!');
-                    
-                } else if (data.state === 'FAILURE' || data.state === 'ERROR') {
-                    // Upload falhou
-                    clearInterval(pollInterval);
-                    uploadConcluido(false, data.status || 'Erro durante o upload');
-                    
-                }
-                // Para estado PENDING, não faz nada - continua mostrando "Aguardando..."
-            })
-            .catch(error => {
-                console.error('Erro ao verificar status:', error);
-            });
-    }, 2000);
-}
-
-function atualizarProgresso(percent, status) {
-    const progressBar = document.getElementById('upload-progress-bar');
-    const progressText = document.getElementById('upload-progress-text');
-    const statusElement = document.getElementById('upload-status');
-    
-    progressBar.style.width = `${percent}%`;
-    progressBar.setAttribute('aria-valuenow', percent);
-    progressText.textContent = `${percent}%`;
-    statusElement.textContent = status;
-    
-    // Mudar cor baseada no progresso
-    if (percent < 30) {
-        progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-warning';
-    } else if (percent < 70) {
-        progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-info';
-    } else {
-        progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-success';
-    }
-}
-
-function uploadConcluido(success, message) {
-    const progressContent = document.getElementById('upload-progress-content');
-    const successContent = document.getElementById('upload-success');
-    const errorContent = document.getElementById('upload-error');
-    const closeBtn = document.getElementById('btn-close-progress');
-    const reloadBtn = document.getElementById('btn-reload-page');
-    const retryBtn = document.getElementById('btn-retry-upload');
-    
-    progressContent.style.display = 'none';
-    
-    if (success) {
-        successContent.style.display = 'block';
-        document.getElementById('success-message').textContent = message;
-        closeBtn.style.display = 'none';
-        reloadBtn.style.display = 'inline-block';
-        
-        // Habilitar o botão de upload novamente
-        const uploadBtn = document.querySelector('.upload-youtube');
-        uploadBtn.innerHTML = '<i class="fab fa-youtube me-2"></i>Upload YouTube';
-        uploadBtn.disabled = false;
-        
-    } else {
-        errorContent.style.display = 'block';
-        document.getElementById('error-message').textContent = message;
-        closeBtn.style.display = 'inline-block';
-        retryBtn.style.display = 'inline-block';
-        
-        // Configurar botão de tentar novamente
-        retryBtn.onclick = function() {
-            const videoId = document.querySelector('.upload-youtube').getAttribute('data-video-id');
-            iniciarUploadYouTube(videoId);
-        };
-        
-        // Habilitar o botão de upload novamente
-        const uploadBtn = document.querySelector('.upload-youtube');
-        uploadBtn.innerHTML = '<i class="fab fa-youtube me-2"></i>Upload YouTube';
-        uploadBtn.disabled = false;
-    }
-    
-    // Configurar botão de recarregar página
-    reloadBtn.onclick = function() {
-        location.reload();
-    };
-}
-
-// Limpar intervalo quando o modal for fechado
-document.getElementById('modalUploadProgress').addEventListener('hidden.bs.modal', function() {
-    if (pollInterval) {
-        clearInterval(pollInterval);
-        pollInterval = null;
-    }
-});
 
     // ✅ INICIALIZAR
     carregarAgendamentos();
@@ -899,76 +704,314 @@ document.getElementById('modalUploadProgress').addEventListener('hidden.bs.modal
 </script>
 
 <style>
-.alert-success {
-    border-left: 4px solid #198754;
+/* static/style.css - CSS CORRIGIDO E MELHORADO */
+:root {
+    --primary-color: #0d6efd;
+    --success-color: #198754;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #0dcaf0;
+    --dark-color: #212529;
+    --light-color: #f8f9fa;
 }
 
-.badge {
-    font-size: 0.75em;
+body {
+    background-color: #f5f5f5;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
 }
 
-.form-check-input:checked {
-    background-color: #198754;
-    border-color: #198754;
+.navbar-brand {
+    font-weight: 600;
+    font-size: 1.25rem;
 }
 
-.form-check {
-    margin-bottom: 0.5rem;
+.navbar-dark {
+    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.fa-tiktok {
-    color: #000000;
-}
-
-.fa-youtube {
-    color: #ff0000;
-}
-
-.editar-agendamento {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
-}
-
-/* Melhorias visuais */
+/* Cards melhorados */
 .card {
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    border: 1px solid rgba(0, 0, 0, 0.125);
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    margin-bottom: 1.5rem;
+}
+
+.card:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
 }
 
 .card-header {
-    background-color: #f8f9fa;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 12px 12px 0 0 !important;
+    padding: 1rem 1.25rem;
 }
 
-.btn {
-    border-radius: 0.375rem;
-}
-
-.upload-youtube {
-    background: linear-gradient(135deg, #FF0000, #CC0000);
-    border: none;
-    color: white;
+.card-title {
+    color: #2c3e50;
     font-weight: 600;
+    margin-bottom: 0;
 }
 
-.upload-youtube:hover {
-    background: linear-gradient(135deg, #CC0000, #990000);
+/* Tabelas melhoradas */
+.table {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.table th {
+    background: linear-gradient(135deg, #2c3e50, #34495e);
     color: white;
+    border: none;
+    font-weight: 600;
+    padding: 1rem 0.75rem;
+}
+
+.table td {
+    padding: 0.75rem;
+    vertical-align: middle;
+    border-color: #e9ecef;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.04);
+    transform: scale(1.01);
+    transition: all 0.2s ease;
+}
+
+/* Botões melhorados */
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+    box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #0b5ed7, #0a58ca);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(13, 110, 253, 0.4);
 }
 
 .btn-success {
-    background: linear-gradient(135deg, #28a745, #20c997);
+    background: linear-gradient(135deg, #198754, #157347);
+    box-shadow: 0 2px 4px rgba(25, 135, 84, 0.3);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #dc3545, #bb2d3b);
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #ffc107, #ffca2c);
+    color: #000;
+    box-shadow: 0 2px 4px rgba(255, 193, 7, 0.3);
+}
+
+.btn-info {
+    background: linear-gradient(135deg, #0dcaf0, #31d2f2);
+    box-shadow: 0 2px 4px rgba(13, 202, 240, 0.3);
+}
+
+/* Badges personalizados */
+.badge {
+    font-size: 0.75em;
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+    border-radius: 6px;
+}
+
+.bg-purple { 
+    background: linear-gradient(135deg, #6f42c1, #5a2d91) !important; 
+}
+
+.bg-orange { 
+    background: linear-gradient(135deg, #fd7e14, #e56a00) !important; 
+}
+
+/* Formulários */
+.form-control, .form-select {
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    padding: 0.5rem 0.75rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    transform: translateY(-1px);
+}
+
+/* Alertas */
+.alert {
+    border: none;
+    border-radius: 10px;
+    border-left: 4px solid;
+}
+
+.alert-success {
+    border-left-color: var(--success-color);
+    background: linear-gradient(135deg, #d1e7dd, #f8f9fa);
+}
+
+.alert-danger {
+    border-left-color: var(--danger-color);
+    background: linear-gradient(135deg, #f8d7da, #f8f9fa);
+}
+
+.alert-warning {
+    border-left-color: var(--warning-color);
+    background: linear-gradient(135deg, #fff3cd, #f8f9fa);
+}
+
+.alert-info {
+    border-left-color: var(--info-color);
+    background: linear-gradient(135deg, #cff4fc, #f8f9fa);
+}
+
+/* Progress bars */
+.progress {
+    border-radius: 10px;
+    height: 8px;
+}
+
+.progress-bar {
+    border-radius: 10px;
+}
+
+/* Modal melhorado */
+.modal-content {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+    border-bottom: 1px solid #e9ecef;
+    border-radius: 12px 12px 0 0;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+}
+
+/* Dropdown melhorado */
+.dropdown-menu {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    padding: 0.5rem;
+}
+
+.dropdown-item {
+    border-radius: 6px;
+    margin: 2px 0;
+    transition: all 0.2s ease;
+}
+
+.dropdown-item:hover {
+    background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+    color: white;
+    transform: translateX(5px);
+}
+
+/* Paginação */
+.pagination .page-link {
+    border-radius: 8px;
+    margin: 0 2px;
+    border: none;
+    color: #495057;
+}
+
+.pagination .page-item.active .page-link {
+    background: linear-gradient(135deg, #0d6efd, #0b5ed7);
     border: none;
 }
 
-/* Loading animation */
-.fa-spinner {
-    animation: spin 1s linear infinite;
+/* List group */
+.list-group-item {
+    border: none;
+    border-bottom: 1px solid #e9ecef;
+    padding: 0.75rem 1rem;
 }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+.list-group-item:last-child {
+    border-bottom: none;
+}
+
+/* Utilities */
+.text-truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+/* Animações */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 10px;
+    }
+    
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .table-responsive {
+        font-size: 0.875rem;
+        border-radius: 8px;
+    }
+    
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+    }
+    
+    .display-4 {
+        font-size: 2rem;
+    }
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #0b5ed7, #0a58ca);
 }
 </style>
 {% endblock %}

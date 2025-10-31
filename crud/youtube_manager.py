@@ -122,3 +122,47 @@ class YouTubeManager:
         except Exception as e:
             print(f"❌ Tabela não tem as colunas necessárias: {e}")
             return False
+        
+    def buscar_por_id(self, youtube_id: int) -> Optional[VideoYouTube]:
+        """Busca registro do YouTube pelo ID"""
+        try:
+            with Session(self.engine) as session:
+                return session.get(VideoYouTube, youtube_id)
+        except Exception as e:
+            print(f"⚠️ Erro ao buscar YouTube por ID: {e}")
+            return None
+        
+    def atualizar_campos(self, youtube_id: int, **dados) -> bool:
+        """Atualiza campos específicos do registro YouTube"""
+        try:
+            with Session(self.engine) as session:
+                youtube_info = session.get(VideoYouTube, youtube_id)
+                if not youtube_info:
+                    return False
+                
+                for campo, valor in dados.items():
+                    if hasattr(youtube_info, campo):
+                        setattr(youtube_info, campo, valor)
+                
+                session.commit()
+                return True
+        except Exception as e:
+            print(f"❌ Erro ao atualizar YouTube: {e}")
+            session.rollback()
+            return False
+        
+    def deletar(self, youtube_id: int) -> bool:
+        """Remove registro do YouTube"""
+        try:
+            with Session(self.engine) as session:
+                youtube_info = session.get(VideoYouTube, youtube_id)
+                if not youtube_info:
+                    return False
+                
+                session.delete(youtube_info)
+                session.commit()
+                return True
+        except Exception as e:
+            print(f"❌ Erro ao deletar YouTube: {e}")
+            session.rollback()
+            return False

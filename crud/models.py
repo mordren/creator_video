@@ -31,7 +31,7 @@ class TipoConteudo(str, Enum):
 
 class Roteiro(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    id_video: str = Field(unique=True, index=True)  # ID interno do canal
+    id_video: str = Field(index=True, sa_type=Text)
     titulo: str = Field(sa_type=Text)
     texto: str = Field(sa_type=Text)
     descricao: str = Field(sa_type=Text)
@@ -59,28 +59,21 @@ class Video(SQLModel, table=True):
     audio_mixado: Optional[str] = Field(default=None, sa_type=Text)
     tts_provider: Optional[str] = Field(default=None, sa_type=Text)
     voz_tts: Optional[str] = Field(default=None, sa_type=Text)
-    duracao: Optional[int] = Field(default=None)  # em segundos
+    duracao: Optional[int] = Field(default=None)
     status_upload: StatusUpload = Field(default=StatusUpload.RASCUNHO)
     
-    # Métricas consolidadas (soma de todas as plataformas)
     visualizacao_total: int = Field(default=0)
-    
     data_criacao: datetime = Field(default_factory=datetime.now)
     
     # Relações
-    roteiro: Roteiro = Relationship(back_populates="video")
-    youtube: Optional["VideoYouTube"] = Relationship(back_populates="video")
-    tiktok: Optional["VideoTikTok"] = Relationship(back_populates="video")
+    roteiro: "Roteiro" = Relationship(back_populates="video")
+    youtube: Optional["VideoYouTube"] = Relationship(back_populates="video")    
 
-# models.py - ATUALIZE a classe VideoYouTube
 class VideoYouTube(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    video_id: int = Field(foreign_key="video.id")
+    video_id: int = Field(foreign_key="video.id", unique=True)  # Correção crucial
     
-    # ID do vídeo no YouTube (NOVO CAMPO)
-    youtube_video_id: Optional[str] = Field(default=None, index=True)
-    
-    # Link do vídeo no YouTube (NOVO CAMPO)
+    # Link do vídeo no YouTube
     link: Optional[str] = Field(default=None, sa_type=Text)
     
     # Timestamps
@@ -96,21 +89,9 @@ class VideoYouTube(SQLModel, table=True):
     # Tipo de conteúdo
     tipo_conteudo: TipoConteudo = Field(default=TipoConteudo.SHORT)
     
-    video: Video = Relationship(back_populates="youtube")
-    
-class VideoTikTok(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    video_id: int = Field(foreign_key="video.id")
-    
-    # Timestamps
-    hora_upload: Optional[datetime] = Field(default=None)
-    hora_estreia: Optional[datetime] = Field(default=None)
-    
-    # Métricas básicas (sem API oficial)
-    visualizacoes: int = Field(default=0)
-    likes: int = Field(default=0)
-    
-    video: Video = Relationship(back_populates="tiktok")
+    # Relação corrigida
+    video: "Video" = Relationship(back_populates="youtube")
+
 
 class Agendamento(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Gestão — {{ video.titulo }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1 class="h4"><i class="fas fa-tasks me-2"></i>Gestão do Vídeo</h1>
+  <a href="{{ url_for('video_edit', video_id=video.id) }}" class="btn btn-outline-secondary">
+    <i class="fas fa-arrow-left me-1"></i>Voltar
+  </a>
+</div>
+
+<!-- Abas -->
+<ul class="nav nav-tabs mb-4" id="managementTabs" role="tablist">
+  <li class="nav-item">
+    <button class="nav-link" id="scheduling-tab" data-bs-toggle="tab" data-bs-target="#scheduling" type="button" role="tab" aria-selected="false">
+      <i class="fas fa-calendar-alt me-2"></i>Agendamento
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link active" id="uploads-tab" data-bs-toggle="tab" data-bs-target="#uploads" type="button" role="tab" aria-selected="true">
+      <i class="fas fa-upload me-2"></i>Uploads
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content">
+  <!-- Conteúdo mínimo de Agendamento (placeholder) -->
+  <div class="tab-pane fade" id="scheduling" role="tabpanel" aria-labelledby="scheduling-tab">
+    <div class="text-muted small">Sem conteúdo aqui por enquanto.</div>
+  </div>
+
+  <!-- Uploads -> YouTube -->
+  <div class="tab-pane fade show active" id="uploads" role="tabpanel" aria-labelledby="uploads-tab">
+    <div class="row">
+      <div class="col-md-7">
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0"><i class="fab fa-youtube me-2 text-danger"></i>YouTube</h5>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-success btn-sm upload-youtube" data-video-id="{{ video.id }}">
+                <i class="fas fa-bolt me-1"></i>Upload Automático
+              </button>
+              <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#youtubeModal">
+                <i class="fas fa-plus me-1"></i>Registrar Manual
+              </button>
+            </div>
+          </div>
+          <div class="card-body" id="youtube-info-container">
+            <div class="text-center text-muted py-4">
+              <i class="fab fa-youtube fa-3x mb-3"></i>
+              <p class="mb-0">Nenhum upload registrado</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lateral com info do vídeo -->
+      <div class="col-md-5">
+        <div class="card mb-4">
+          <div class="card-header"><h5 class="card-title mb-0"><i class="fas fa-info-circle me-2"></i>Vídeo</h5></div>
+          <div class="card-body small">
+            <div class="fw-semibold">{{ video.titulo }}</div>
+            <div class="text-muted">Canal: {{ video.canal_nome }}</div>
+            <div class="text-muted">ID interno: #{{ video.id }}</div>
+            <div class="mt-2">
+              <span class="badge {% if video.video_gerado %}bg-success{% else %}bg-warning{% endif %}">
+                {% if video.video_gerado %}Vídeo pronto{% else %}Aguardando vídeo{% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h5 class="card-title mb-0"><i class="fas fa-chart-bar me-2"></i>Progresso</h5></div>
+          <div class="card-body">
+            <div class="d-flex justify-content-between small text-muted mb-2">
+              <span>YouTube</span><span id="youtube-stats">0/1</span>
+            </div>
+            <div class="progress" style="height: 20px;">
+              <div class="progress-bar bg-success" id="upload-progress" style="width: 0%">0%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /row -->
+  </div><!-- /uploads -->
+</div><!-- /tab-content -->
+
+<!-- Modal: Form YouTube -->
+<div class="modal fade" id="youtubeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="youtubeForm" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fab fa-youtube me-2 text-danger"></i>Registrar Upload YouTube</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <!-- hidden -->
+        <input type="hidden" id="youtube_id" name="youtube_id" value="">
+        <input type="hidden" name="video_id" value="{{ video.id }}">
+
+        <div class="mb-3">
+          <label for="youtube_link" class="form-label">Link *</label>
+          <input type="url" class="form-control" id="youtube_link" name="link" required placeholder="https://youtu.be/xxxx">
+        </div>
+
+        <div class="row">
+          <div class="col-md-6">
+            <label for="hora_upload" class="form-label">Upload *</label>
+            <input type="datetime-local" class="form-control" id="hora_upload" name="hora_upload" required>
+          </div>
+          <div class="col-md-6">
+            <label for="hora_estreia" class="form-label">Estreia</label>
+            <input type="datetime-local" class="form-control" id="hora_estreia" name="hora_estreia">
+          </div>
+        </div>
+
+        <div class="row mt-3">
+          <div class="col-4">
+            <label for="visualizacoes" class="form-label">Views</label>
+            <input type="number" class="form-control" id="visualizacoes" name="visualizacoes" value="0" min="0">
+          </div>
+          <div class="col-4">
+            <label for="likes" class="form-label">Likes</label>
+            <input type="number" class="form-control" id="likes" name="likes" value="0" min="0">
+          </div>
+          <div class="col-4">
+            <label for="comentarios" class="form-label">Comentários</label>
+            <input type="number" class="form-control" id="comentarios" name="comentarios" value="0" min="0">
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <label for="tipo_conteudo" class="form-label">Tipo</label>
+          <select class="form-select" id="tipo_conteudo" name="tipo_conteudo">
+            <option value="short">Short</option>
+            <option value="long" selected>Long</option>
+            <option value="reel">Reel</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">
+          <i class="fas fa-save me-1"></i>Salvar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+  <!-- Carregue seu JS externo se quiser tratar submit/alerts dinamicamente -->
+  <script src="{{ url_for('static', filename='js/video_manager.js') }}"></script>
+{% endblock %}

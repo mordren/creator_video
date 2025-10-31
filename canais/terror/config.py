@@ -7,7 +7,8 @@ from pathlib import Path
 PASTA_BASE = Path(r"E:\Canal Terror")
 PASTA_CANAL = Path(r"C:\Users\mordren\Documents\creator\canais\terror")
 PASTA_VIDEOS = Path(r"E:\Canal Terror\Vídeos")
-MUSICA_SHORT = Path(r"C:\Users\mordren\Documents\creator\canais\terror\assets\musica\musica.mp3")
+MUSICA_SHORT = Path(r"C:\Users\mordren\Documents\creator\canais\terror\assets\musica\ominus.mp3")
+MUSICA_LONG = Path(r"C:\Users\mordren\Documents\creator\canais\terror\assets\musica\long.mp3")
 NOME = "Garras no Telhado"
 LINK = "@garras_no_telhado"
 # -------------------------- Parâmetros Comuns --------------------------------------
@@ -52,8 +53,7 @@ IMAGES_DIR_LONG = PASTA_BASE / "imagens_long"
 
 # -------------------------- Templates ----------------------------------------------
 TEMPLATE_SHORT = "short_sequencial"
-TEMPLATE_LONG = "long_terror"
+TEMPLATE_LONG = "long_estatico"
 RESOLUCAO_SHORT = "720x1280"  # Vertical para shorts
 RESOLUCAO_LONG = "1280x720"   # Horizontal para vídeos longos
 
-CLAUDE_MODEL="claude-3-sonnet-20240229"

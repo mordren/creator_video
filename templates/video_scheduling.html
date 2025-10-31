@@ -1,0 +1,482 @@
+{% extends "base.html" %}
+
+{% block title %}Agendamento - {{ video.titulo }} - Sistema de Vídeos{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-calendar-alt me-2"></i>Agendamento</h1>
+    <div>
+        <a href="{{ url_for('video_edit', video_id=video.id) }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Voltar para Edição
+        </a>
+        <a href="{{ url_for('video_uploads', video_id=video.id) }}" class="btn btn-outline-info ms-2">
+            <i class="fas fa-upload me-2"></i>Uploads
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- Status do Agendamento -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-clock me-2"></i>Agendamentos Ativos</h5>
+            </div>
+            <div class="card-body">
+                <div id="status-agendamento">
+                    <div class="text-center text-muted mb-3">
+                        <i class="fas fa-clock fa-2x"></i>
+                        <p class="mb-0 small">Nenhum agendamento configurado</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Histórico de Agendamentos -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-history me-2"></i>Histórico de Agendamentos</h5>
+            </div>
+            <div class="card-body">
+                <div id="historico-agendamentos">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-history fa-2x mb-2"></i>
+                        <p class="mb-0">Nenhum histórico disponível</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Informações Rápidas -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-info-circle me-2"></i>Informações do Vídeo</h5>
+            </div>
+            <div class="card-body">
+                <h6>{{ video.titulo }}</h6>
+                <div class="small text-muted">
+                    <div>Canal: {{ video.canal_nome }}</div>
+                    <div>ID: #{{ video.id }}</div>
+                    <div>Status: 
+                        <span class="badge {% if video.video_gerado %}bg-success{% else %}bg-warning{% endif %}">
+                            {% if video.video_gerado %}Vídeo Pronto{% else %}Aguardando Vídeo{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ações de Agendamento -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-plus me-2"></i>Novo Agendamento</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgendamento">
+                        <i class="fas fa-calendar-plus me-2"></i>Criar Agendamento
+                    </button>
+                    
+                    <button type="button" class="btn btn-outline-secondary" id="btn-agendamento-rapido" data-video-id="{{ video.id }}">
+                        <i class="fas fa-bolt me-2"></i>Agendamento Rápido
+                    </button>
+                    
+                    <button type="button" class="btn btn-outline-danger" id="btn-cancelar-agendamento" style="display: none;">
+                        <i class="fas fa-times me-2"></i>Cancelar Todos
+                    </button>
+                </div>
+
+                <div class="mt-3">
+                    <div class="alert alert-info">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        <strong>Dicas:</strong>
+                        <ul class="mb-0 mt-2 small">
+                            <li>Agende para horários de pico (14h-16h YouTube, 18h-21h TikTok)</li>
+                            <li>Evite publicar entre 2h e 6h da manhã</li>
+                            <li>Use agendamento recorrente para séries</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Agendamento -->
+<div class="modal fade" id="modalAgendamento" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-calendar-plus me-2"></i>
+                    Agendar Publicação
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="form-agendamento">
+                    <input type="hidden" id="agendamento_id" value="">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Plataformas *</label>
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="platform_tiktok" value="tiktok">
+                                    <label class="form-check-label" for="platform_tiktok">
+                                        <i class="fab fa-tiktok me-2"></i>TikTok
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="platform_youtube" value="youtube">
+                                    <label class="form-check-label" for="platform_youtube">
+                                        <i class="fab fa-youtube me-2 text-danger"></i>YouTube
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="data_publicacao" class="form-label">Data de Publicação *</label>
+                        <input type="date" class="form-control" id="data_publicacao" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="hora_publicacao" class="form-label">Horário de Publicação *</label>
+                        <input type="time" class="form-control" id="hora_publicacao" required value="18:00">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Configurações Avançadas</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="agendamento_recorrente">
+                            <label class="form-check-label" for="agendamento_recorrente">
+                                Agendamento recorrente
+                            </label>
+                        </div>
+                        <div class="form-text">
+                            Publicar automaticamente em todos os dias da semana no mesmo horário
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btn-salvar-agendamento">
+                    <i class="fas fa-save me-2"></i>Salvar Agendamento
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const videoId = {{ video.id }};
+
+    // ✅ FUNÇÕES DE AGENDAMENTO
+    function carregarAgendamentos() {
+        fetch(`/api/videos/${videoId}/agendamentos`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro ao carregar agendamentos');
+                }
+                return response.json();
+            })
+            .then(data => {
+                atualizarInterfaceAgendamento(data);
+                carregarHistoricoAgendamentos();
+            })
+            .catch(error => {
+                console.error('Erro ao carregar agendamentos:', error);
+                document.getElementById('status-agendamento').innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Não foi possível carregar os agendamentos.
+                    </div>
+                `;
+            });
+    }
+
+    function carregarHistoricoAgendamentos() {
+        fetch(`/api/videos/${videoId}/agendamentos/historico`)
+            .then(response => response.json())
+            .then(data => {
+                atualizarHistoricoAgendamentos(data);
+            })
+            .catch(error => {
+                console.error('Erro ao carregar histórico:', error);
+            });
+    }
+
+    function atualizarInterfaceAgendamento(agendamentos) {
+        const statusAgendamento = document.getElementById('status-agendamento');
+        
+        if (!agendamentos || agendamentos.length === 0) {
+            statusAgendamento.innerHTML = `
+                <div class="text-center text-muted mb-3">
+                    <i class="fas fa-clock fa-2x"></i>
+                    <p class="mb-0 small">Nenhum agendamento configurado</p>
+                </div>
+            `;
+            document.getElementById('btn-cancelar-agendamento').style.display = 'none';
+            return;
+        }
+
+        let html = '';
+        agendamentos.forEach(agendamento => {
+            const dataObj = new Date(agendamento.data_publicacao + 'T' + agendamento.hora_publicacao);
+            const dataFormatada = dataObj.toLocaleDateString('pt-BR');
+            const horaFormatada = dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            
+            const plataformas = agendamento.plataformas.map(platform => {
+                const icon = platform === 'tiktok' ? 
+                    '<i class="fab fa-tiktok me-1"></i>' : 
+                    '<i class="fab fa-youtube me-1 text-danger"></i>';
+                const label = platform === 'tiktok' ? 'TikTok' : 'YouTube';
+                return `<span class="badge bg-secondary me-1">${icon}${label}</span>`;
+            }).join('');
+
+            html += `
+                <div class="alert alert-success">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="alert-heading">
+                                <i class="fas fa-calendar-check me-2"></i>
+                                Agendado para ${dataFormatada}
+                            </h6>
+                            <div class="mb-2">
+                                <strong>Horário:</strong> ${horaFormatada}
+                            </div>
+                            <div class="mb-2">
+                                <strong>Plataformas:</strong> ${plataformas}
+                            </div>
+                            ${agendamento.recorrente ? '<span class="badge bg-info"><i class="fas fa-redo me-1"></i>Recorrente</span>' : ''}
+                            <div class="mt-2">
+                                <small class="text-muted">Status: ${agendamento.status}</small>
+                            </div>
+                        </div>
+                        <button class="btn btn-sm btn-outline-secondary editar-agendamento" 
+                                data-agendamento-id="${agendamento.id}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+
+        statusAgendamento.innerHTML = html;
+        document.getElementById('btn-cancelar-agendamento').style.display = 'inline-block';
+        
+        // Adicionar event listeners para botões de edição
+        document.querySelectorAll('.editar-agendamento').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const agendamentoId = this.getAttribute('data-agendamento-id');
+                carregarAgendamentoParaEdicao(agendamentoId);
+            });
+        });
+    }
+
+    function atualizarHistoricoAgendamentos(historico) {
+        const historicoElement = document.getElementById('historico-agendamentos');
+        
+        if (!historico || historico.length === 0) {
+            historicoElement.innerHTML = `
+                <div class="text-center text-muted">
+                    <i class="fas fa-history fa-2x mb-2"></i>
+                    <p class="mb-0">Nenhum histórico disponível</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '<div class="list-group list-group-flush">';
+        historico.forEach(item => {
+            const dataExecucao = new Date(item.data_execucao).toLocaleString('pt-BR');
+            const statusIcon = item.sucesso ? 'fa-check text-success' : 'fa-times text-danger';
+            
+            html += `
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas ${statusIcon} me-2"></i>
+                            <small>${dataExecucao}</small>
+                        </div>
+                        <span class="badge ${item.sucesso ? 'bg-success' : 'bg-danger'}">
+                            ${item.sucesso ? 'Sucesso' : 'Falha'}
+                        </span>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        
+        historicoElement.innerHTML = html;
+    }
+
+    function carregarAgendamentoParaEdicao(agendamentoId) {
+        fetch(`/api/agendamentos/${agendamentoId}`)
+            .then(response => response.json())
+            .then(agendamento => {
+                document.getElementById('agendamento_id').value = agendamento.id;
+                document.getElementById('platform_tiktok').checked = agendamento.plataformas.includes('tiktok');
+                document.getElementById('platform_youtube').checked = agendamento.plataformas.includes('youtube');
+                document.getElementById('data_publicacao').value = agendamento.data_publicacao;
+                document.getElementById('hora_publicacao').value = agendamento.hora_publicacao;
+                document.getElementById('agendamento_recorrente').checked = agendamento.recorrente;
+                
+                const modal = new bootstrap.Modal(document.getElementById('modalAgendamento'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Erro ao carregar agendamento:', error);
+                alert('Erro ao carregar agendamento para edição');
+            });
+    }
+
+    function salvarAgendamento() {
+        const plataformas = [];
+        if (document.getElementById('platform_tiktok').checked) plataformas.push('tiktok');
+        if (document.getElementById('platform_youtube').checked) plataformas.push('youtube');
+        
+        if (plataformas.length === 0) {
+            alert('Selecione pelo menos uma plataforma!');
+            return;
+        }
+
+        const agendamentoData = {
+            video_id: videoId,
+            plataformas: plataformas,
+            data_publicacao: document.getElementById('data_publicacao').value,
+            hora_publicacao: document.getElementById('hora_publicacao').value,
+            recorrente: document.getElementById('agendamento_recorrente').checked
+        };
+
+        const agendamentoId = document.getElementById('agendamento_id').value;
+        const url = agendamentoId ? `/api/agendamentos/${agendamentoId}` : '/api/agendamentos';
+        const method = agendamentoId ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(agendamentoData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modalAgendamento'));
+                modal.hide();
+                carregarAgendamentos();
+                document.getElementById('form-agendamento').reset();
+                document.getElementById('agendamento_id').value = '';
+                document.getElementById('hora_publicacao').value = '18:00';
+            } else {
+                alert('Erro ao salvar agendamento: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao salvar agendamento:', error);
+            alert('Erro ao salvar agendamento');
+        });
+    }
+
+    function cancelarAgendamento() {
+        if (!confirm('Tem certeza que deseja cancelar todos os agendamentos deste vídeo?')) {
+            return;
+        }
+
+        fetch(`/api/videos/${videoId}/agendamentos`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                carregarAgendamentos();
+            } else {
+                alert('Erro ao cancelar agendamentos: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao cancelar agendamentos:', error);
+            alert('Erro ao cancelar agendamentos');
+        });
+    }
+
+    function agendamentoRapido() {
+        // Define agendamento para hoje às 18h
+        const hoje = new Date();
+        const data = hoje.toISOString().split('T')[0];
+        
+        const agendamentoData = {
+            video_id: videoId,
+            plataformas: ['youtube'],
+            data_publicacao: data,
+            hora_publicacao: '18:00',
+            recorrente: false
+        };
+
+        fetch('/api/agendamentos', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(agendamentoData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Agendamento rápido criado para hoje às 18h!');
+                carregarAgendamentos();
+            } else {
+                alert('Erro ao criar agendamento rápido: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao criar agendamento rápido:', error);
+            alert('Erro ao criar agendamento rápido');
+        });
+    }
+
+    // ✅ EVENT LISTENERS
+    document.getElementById('btn-salvar-agendamento').addEventListener('click', salvarAgendamento);
+    document.getElementById('btn-cancelar-agendamento').addEventListener('click', cancelarAgendamento);
+    document.getElementById('btn-agendamento-rapido').addEventListener('click', agendamentoRapido);
+
+    // Configurar data mínima para hoje e data padrão
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('data_publicacao').min = today;
+    document.getElementById('data_publicacao').value = today;
+
+    // ✅ INICIALIZAR
+    carregarAgendamentos();
+});
+</script>
+
+<style>
+.alert-success {
+    border-left: 4px solid #198754;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.list-group-item {
+    border: none;
+    padding: 0.75rem 0;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+</style>
+{% endblock %}

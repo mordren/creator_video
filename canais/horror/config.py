@@ -7,7 +7,7 @@ from pathlib import Path
 PASTA_BASE = Path(r"E:\Canal Horror")
 PASTA_CANAL = Path(r"C:\Users\mordren\Documents\creator\canais\horror")
 PASTA_VIDEOS = Path(r"E:\Canal Horror\Vídeos")
-MUSICA = Path(r"C:\Users\mordren\Documents\creator\canais\terror\assets\musica\musica.mp3")
+MUSICA_LONG = Path(r"C:\Users\mordren\Documents\creator\canais\terror\assets\musica\long.mp3")
 NOME = "Rooftop Whispers "
 LINK = "@rooftopwhispers"
 # -------------------------- Parâmetros Comuns --------------------------------------
@@ -26,7 +26,7 @@ TEMAS_FILE = "temas.txt"
 
 # -------------------------- TTS ----------------------------------------------------
 EDGE_TTS_VOICE = "en-US-AndrewNeural"
-EDGE_TTS_RATE = "-4%"
+EDGE_TTS_RATE = "-5%"
 EDGE_TTS_PITCH = "+1Hz"
 EDGE_TTS_LEGENDAS = True
 EDGE_TTS_AJUSTAR_TIMESTAMPS: True  
@@ -52,6 +52,6 @@ IMAGES_DIR_LONG = PASTA_BASE / "imagens_long"
 
 # -------------------------- Templates ----------------------------------------------
 TEMPLATE_SHORT = "short_sequencial"
-TEMPLATE_LONG = "long_terror"
+TEMPLATE_LONG = "long_estatico"
 RESOLUCAO_SHORT = "720x1280"  # Vertical para shorts
 RESOLUCAO_LONG = "1280x720"   # Horizontal para vídeos longos

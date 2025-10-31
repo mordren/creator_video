@@ -1,0 +1,16 @@
+{
+  "tipo": "json",
+  "campos_obrigatorios": ["texto", "titulo", "descricao", "hook", "hook_pt", "tags", "thumb"],
+  "placeholder_tamanho": "{TAMANHO_MAX}",
+  "placeholder_tema": "{tema}",
+  "exemplo_resposta": {
+    "texto": "Una reflexión devocional tranquila invitando la presencia y paz de Dios.",
+    "titulo": "Confía en Dios Para Traerte Paz | Oración de la Mañana",
+    "descricao": "Una serena oración matutina para comenzar tu día en fe y quietud.",
+    "hook": "Deja que Dios calme tu corazón hoy.",
+    "hook_pt": "Deixe Deus acalmar o seu coração hoje.",
+    "thumb": "paz oración de la mañana",
+    "tags": ["#OraciónDeLaMañana", "#Oración", "#Jesús", "#Paz", "#Fe"]
+  },
+  "instrucoes_output": "Return ONLY pure JSON. Do NOT include markdown, comments, or escaped quotes."
+}

@@ -13,10 +13,13 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="#">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
                 <i class="fas fa-video me-2"></i>Sistema de Vídeos
             </a>
-            <div class="navbar-nav">                
+            <div class="navbar-nav">
+                <a class="nav-link" href="{{ url_for('index') }}">Início</a>
+                <a class="nav-link" href="{{ url_for('list_videos') }}">Vídeos</a>
+                <a class="nav-link" href="{{ url_for('novo_roteiro') }}">Novo Roteiro</a>
             </div>
         </div>
     </nav>
@@ -25,6 +28,8 @@
         {% block content %}{% endblock %}
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

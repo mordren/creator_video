@@ -1,0 +1,115 @@
+<div class="card">
+    <div class="card-body">
+        <div class="row">
+            <!-- Coluna 1: Informações Básicas -->
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label"><strong>Roteiro ID</strong></label>
+                    <p class="form-control-plaintext">{{ video.roteiro_id }}</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label"><strong>Título</strong></label>
+                    <p class="form-control-plaintext">{{ video.roteiro.titulo }}</p>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label"><strong>Descrição</strong></label>
+                    <p class="form-control-plaintext">{{ video.roteiro.descricao }}</p>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label"><strong>Tags</strong></label>
+                    <p class="form-control-plaintext">{{ video.roteiro.tags }}</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label"><strong>ID</strong></label>
+                    <p class="form-control-plaintext">{{ video.id }}</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label"><strong>Duração</strong></label>
+                    <p class="form-control-plaintext">{{ video.duracao }} segundos</p>
+                </div>
+
+                
+                
+                <div class="mb-3">
+                    <label class="form-label"><strong>Visualizações</strong></label>
+                    <p class="form-control-plaintext">{{ video.visualizacao_total }}</p>
+                </div>
+            </div>
+
+            <!-- Coluna 2: Status e Configurações -->
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label"><strong>Status Upload</strong></label>
+                    <p>
+                        {% if video.status_upload == 'rascunho' %}
+                            <span class="badge bg-warning">Rascunho</span>
+                        {% else %}
+                            <span class="badge bg-success">{{ video.status_upload }}</span>
+                        {% endif %}
+                    </p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label"><strong>Data Criação</strong></label>
+                    <p class="form-control-plaintext">{{ video.data_criacao.strftime('%d/%m/%Y %H:%M') }}</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label"><strong>TTS Provider</strong></label>
+                    <p class="form-control-plaintext">{{ video.tts_provider }}</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label"><strong>Voz TTS</strong></label>
+                    <p class="form-control-plaintext">{{ video.voz_tts }}</p>
+                </div>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- Arquivos -->
+        <h6 class="mb-3"><strong>Arquivos:</strong></h6>
+        <div class="row">
+            <div class="col-12 mb-2">
+                <label class="form-label"><small>Áudio:</small></label>
+                <p class="form-control-plaintext text-truncate"><small>{{ video.arquivo_audio }}</small></p>
+            </div>
+            
+            <div class="col-12 mb-2">
+                <label class="form-label"><small>Vídeo:</small></label>
+                <p class="form-control-plaintext text-truncate"><small>{{ video.arquivo_video }}</small></p>
+            </div>
+            
+            <div class="col-12 mb-2">
+                <label class="form-label"><small>Legenda:</small></label>
+                <p class="form-control-plaintext text-truncate"><small>{{ video.arquivo_legenda }}</small></p>
+            </div>
+            
+            <div class="col-12 mb-2">
+                <label class="form-label"><small>Áudio Mixado:</small></label>
+                <p class="form-control-plaintext text-truncate"><small>{{ video.audio_mixado }}</small></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.text-truncate {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.form-control-plaintext {
+    background-color: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+}
+</style>

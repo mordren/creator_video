@@ -1,10 +1,13 @@
 # crud/video_manager.py
-from sqlmodel import Session, select
+from flask import session
+from sqlmodel import Session, desc, select
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-
+from sqlalchemy.orm import joinedload
 from .models import Video, Roteiro
-from .connection import engine
+from .connection import engine, get_session
+from flask_sqlalchemy import SQLAlchemy
+
 
 class VideoManager:
     def __init__(self):
@@ -124,3 +127,22 @@ class VideoManager:
                           visualizacao_total: int = None) -> bool:
         """Atualiza métricas do vídeo"""
         return self.salvar_info(roteiro_id, visualizacao_total=visualizacao_total)
+    
+    def get_all_videos(self):    
+        with get_session() as session:
+            stmt = select(Video).order_by(desc(Video.data_criacao))
+            videos = session.exec(stmt).all()               
+            for video in videos:
+                video.roteiro  
+                video.roteiro.canal_obj  
+            
+            return videos  
+        
+    def get_videos_by_roteiro(self, roteiro_id: int):
+         with get_session() as session:
+            # Carrega o vídeo JUNTAMENTE com o roteiro em uma única query
+            video = session.query(Video).options(
+                joinedload(Video.roteiro)
+            ).filter(Video.roteiro_id == roteiro_id).first()
+            
+            return video

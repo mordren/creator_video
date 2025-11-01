@@ -3,6 +3,7 @@ from typing import Optional, List
 from datetime import date, datetime
 from enum import Enum
 from sqlalchemy import Text
+from sqlalchemy.orm import relationship
 
 # Importa a conexão centralizada
 from .connection import engine, criar_tabelas, get_session
@@ -16,7 +17,10 @@ class Canal(SQLModel, table=True):
     ativo: bool = True
     data_criacao: datetime = Field(default_factory=datetime.now)    
     
-    roteiros: List["Roteiro"] = Relationship(back_populates="canal_obj")
+    roteiros: List["Roteiro"] = Relationship(
+        back_populates="canal_obj",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
 class StatusUpload(str, Enum):
     RASCUNHO = "rascunho"
@@ -45,12 +49,18 @@ class Roteiro(SQLModel, table=True):
     data_criacao: datetime = Field(default_factory=datetime.now)
     resolucao: Optional[str] = Field(default="vertical", sa_type=Text) 
     
-    # Relação 1:1 com Video
-    video: Optional["Video"] = Relationship(back_populates="roteiro")
+    # Relação 1:1 com Video com cascade delete
+    video: Optional["Video"] = Relationship(
+        back_populates="roteiro",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
 class Video(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    roteiro_id: int = Field(foreign_key="roteiro.id", unique=True)
+    roteiro_id: int = Field(
+        foreign_key="roteiro.id", 
+        unique=True
+    )
     
     # Metadados do vídeo    
     arquivo_audio: Optional[str] = Field(default=None, sa_type=Text)
@@ -65,13 +75,19 @@ class Video(SQLModel, table=True):
     visualizacao_total: int = Field(default=0)
     data_criacao: datetime = Field(default_factory=datetime.now)
     
-    # Relações
+    # Relações com cascade
     roteiro: "Roteiro" = Relationship(back_populates="video")
-    youtube: Optional["VideoYouTube"] = Relationship(back_populates="video")    
+    youtube: Optional["VideoYouTube"] = Relationship(
+        back_populates="video",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )    
 
 class VideoYouTube(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    video_id: int = Field(foreign_key="video.id", unique=True)  # Correção crucial
+    video_id: int = Field(
+        foreign_key="video.id", 
+        unique=True
+    )
     
     # Link do vídeo no YouTube
     link: Optional[str] = Field(default=None, sa_type=Text)

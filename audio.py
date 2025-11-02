@@ -7,6 +7,7 @@ import argparse
 import subprocess
 from pathlib import Path
 
+from utils import limitar_srt_10_palavras
 from video_maker.video_utils import mixar_audio_com_musica
 
 sys.path.append(str(Path(__file__).parent))
@@ -105,14 +106,20 @@ class AudioSystem:
         if success and audio_file.exists() and is_short:
             print("🎵 Otimizando áudio para short (cortando pausas longas)...")
             audio_otimizado, srt_ajustado = otimizar_audio_e_legenda(str(audio_file), str(srt_file) if srt_file else None)
-            
-            # Usa o áudio otimizado se foi criado
+                        # Usa o áudio otimizado se foi criado
             if audio_otimizado != str(audio_file):
                 audio_file = Path(audio_otimizado)
                 if srt_ajustado:
                     srt_file = Path(srt_ajustado)
-        elif success and audio_file.exists() and not is_short:
 
+        if srt_file and srt_file.exists():
+            print("📝 Limitando SRT a 10 palavras por legenda...")
+            srt_limitado = limitar_srt_10_palavras(str(srt_file))
+            if srt_limitado:
+                srt_file = Path(srt_limitado)
+                print(f"✅ SRT limitado a 10 palavras: {srt_file}")
+
+        elif success and audio_file.exists() and not is_short:
             print("ℹ️  Otimização de áudio skipped (não é short)")
         
         # ✅ CORRIGIDO: Mixar com música de fundo com nome correto

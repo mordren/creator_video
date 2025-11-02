@@ -69,9 +69,9 @@ def criar_video(canal_nome: str, provider: Optional[str], tipo: str, duracao: Op
     if not audio_ok:
         return False
 
-    video_ok = VideoGenerator().gerar_video(int(roteiro_id))
-    print(f"[VIDEO] {'ok' if video_ok else 'falhou'}")
-    return bool(video_ok)
+    #video_ok = VideoGenerator().gerar_video(int(roteiro_id))
+    #print(f"[VIDEO] {'ok' if video_ok else 'falhou'}")
+    #return bool(video_ok)
 
 
 def main():

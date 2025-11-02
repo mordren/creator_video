@@ -22,13 +22,25 @@ Guardar TARGET_WORDS para todas las verificaciones siguientes.
 ======================================================
 PRINCIPIOS FUNDAMENTALES
 
-- El texto devocional principal debe tener aproximadamente TARGET_WORDS palabras (tolerancia estricta abajo).
-- Tono: compasivo, íntimo, respetuoso — nunca sermoneador.
-- Arco emocional: dolor → entrega → fe → paz.
-- Lenguaje: simple, directo, rítmico (ideal para narración sobre música tranquila).
-- Usar ideas bíblicas o paráfrasis cortas (≤10 palabras), nunca citas largas.
-- Evitar garantías de milagros o tono de prosperidad.
-- Sonar como una conversación tranquila con el corazón, no un sermón.
+El texto devocional principal debe tener aproximadamente TARGET_WORDS palabras (tolerancia estricta abajo).
+
+Tono: compasivo, íntimo, respetuoso — nunca sermoneador.
+
+Arco emocional: dolor → entrega → fe → paz.
+
+Lenguaje: simple, directo, rítmico (ideal para narración sobre música tranquila).
+
+Usar ideas bíblicas o paráfrasis cortas (≤10 palabras), nunca citas largas.
+
+Evitar garantías de milagros o tono de prosperidad.
+
+Sonar como una conversación tranquila con el corazón, no un sermón.
+
+Alternar frases cortas y largas para mantener ritmo cinematográfico.
+
+Usar imágenes sensoriales suaves (luz, viento, silencio, amanecer, respiración).
+
+Variar palabras entre textos para evitar repeticiones ("paz", "calma", "descanso", "quietud").
 
 ======================================================
 ESTRUCTURA (OBLIGATORIA)
@@ -36,36 +48,52 @@ ESTRUCTURA (OBLIGATORIA)
 Dividir el texto en 4 movimientos emocionales claros, proporcionales a TARGET_WORDS:
 
 Dolor (≈25%)
-
 Expresar la lucha humana vinculada a {tema}: miedo, confusión, soledad, agotamiento.
-
 Imágenes introspectivas y lenguaje sensorial.
 
 Entrega (≈25%)
-
 Liberación gradual y oración interior.
-
 Del control a la confianza.
-
 Refrán de oraciones cortas y tranquilas ("Dios, confío en Ti." "No puedo, pero Tú sí puedes.").
 
 Fe (≈30%)
-
-Reconstrucción con esperanza a través de principios bíblicos y confianza.
-
+Reconstrucción con esperanza y confianza en los principios bíblicos.
 Parafrasear ideas bíblicas naturalmente.
-
 Mantener ritmo contemplativo y cinematográfico.
+Aproximadamente al 50% del texto, insertar un llamado suave a la interacción (comentario).
+Transicionar hacia gratitud y compasión.
 
 Paz (≈20%)
-
 Cierre con aceptación, gratitud, serenidad.
+Al inicio de esta sección, incluir un llamado natural a compartir el video.
+Al final, añadir un llamado sutil a dejar un “me gusta” y cerrar con una bendición breve.
+El tono debe sentirse como brisa nocturna o amanecer tranquilo.
+Terminar en reflexión o bendición, nunca en instrucción directa.
 
-Sentir como viento nocturno suave o calma del amanecer.
+Las secciones deben fluir sin encabezados literales; expresar los movimientos mediante transiciones emocionales.
 
-Terminar en reflexión tranquila o bendición, no un comando imperativo.
+======================================================
+DIRECTRICES PARA CTAs (LLAMADOS A LA ACCIÓN)
 
-Mezclar secciones sin interrupciones. NO usar encabezados literales como "Dolor/Entrega/Fe/Paz" en el texto final; expresar los movimientos mediante transiciones y flujo de párrafos.
+Cada devocional debe incluir tres CTAs naturales, integrados orgánicamente en el texto:
+
+CTA de Comentario (~50% del texto, dentro de la sección Fe):
+Introducir una invitación cálida y reflexiva para que el oyente comente.
+Debe sonar natural, espiritual y empática, no mecánica.
+Ejemplo de intención: el narrador comparte algo y anima al oyente a escribir su propia oración o experiencia.
+Siempre variar la forma y los verbos (no repetir estructuras exactas).
+
+CTA de Compartir (~85%, al inicio de Paz):
+Animar suavemente a compartir el video con alguien que pueda necesitar escuchar este mensaje.
+El tono debe ser compasivo y sincero, no promocional.
+Ejemplo de intención: “Tal vez alguien que amas necesita escuchar esto hoy.”
+
+CTA de Me gusta (~95–100%, cierre de Paz):
+Terminar con gratitud y una invitación serena a dejar un “me gusta”.
+Ejemplo de intención: “Si esta oración trajo paz a tu corazón, deja un me gusta para que otros puedan encontrarla.”
+Finalizar con una bendición corta (“Que tu noche sea suave y tu fe firme.”).
+
+Los tres CTAs deben sentirse como parte del alma del texto, sin romper el ambiente devocional ni sonar como comandos externos.
 
 ======================================================
 MOTOR DE TÍTULOS (ESTRICTO)
@@ -73,44 +101,38 @@ MOTOR DE TÍTULOS (ESTRICTO)
 Anatomía:
 [Verbo Imperativo] + [Virtud/Resultado] + [Anclaje Temporal] + " | Oración de la Mañana" o " | Oración de la Noche"
 
-Verbos Imperativos: Comienza, Empieza, Ora, Viste, Pide, Confía, Invita, Declara, Guarda, Clama
+Verbos Imperativos: Comienza, Empieza, Ora, Viste, Pide, Confía, Invita, Declara, Guarda, Clama, Encuentra, Descansa en, Recuerda, Inspira, Respira
+Virtudes: Paz, Fortaleza, Protección, Guía, Sabiduría, Valentía, Gozo, Claridad, Esperanza, Descanso, Luz, Serenidad
+Anclajes Temporales: Hoy, Esta Mañana, Antes de Comenzar el Día, Esta Noche, Esta Tarde, Antes de Dormir, Al Despertar, Antes de Que Empiece el Día
 
-Virtudes: Paz, Fortaleza, Protección, Guía, Sabiduría, Valentía, Gozo, Claridad, Avance, Descanso
+Elegir “Noche” cuando {tema} implique descanso, perdón, reflexión o consuelo;
+Elegir “Mañana” cuando {tema} implique propósito, claridad o dirección.
 
-Anclajes Temporales: Hoy, Esta Mañana, Antes de Comenzar el Día, Esta Noche, Esta Tarde
+Generar 6–10 títulos candidatos con diferentes estructuras:
+• Imperativo (“Comienza el Día con Paz”)
+• Poético (“Cuando el Alma se Siente Cansada”)
+• Conversacional (“Antes de Cerrar los Ojos Esta Noche”)
 
-Elegir "Noche" cuando {tema} involucra descanso, perdón, reflexión o consuelo; elegir "Mañana" cuando {tema} involucra guía, propósito, claridad, valentía.
-
-Reglas de Estilo:
-
-50–80 caracteres, ≤12 palabras.
-
-Tono tranquilo y reflexivo.
-
-Title Case (minúsculas para palabras pequeñas como "de", "para", "con").
-
-Siempre terminar con "| Oración de la Mañana" o "| Oración de la Noche".
-
-Etiqueta de Escritura Opcional (si es relevante): Salmo 91, Proverbios 3, Jeremías 29, Bienaventuranzas.
-
-Generar 6–10 candidatos, evaluar por longitud, tono, anclaje y singularidad; seleccionar el que mejor se ajuste como titulo.
+Evaluar por singularidad, tono y longitud (50–80 caracteres, ≤12 palabras).
+Seleccionar el mejor candidato como titulo.
 
 ======================================================
 HOOKS Y METADATOS
 
-hook: frase corta y complementaria (no una repetición del título).
-ej., "Deja que Dios calme tu corazón antes de que comience el día."
+hook: frase corta y complementaria (no repetir el título).
+Ejemplo: “Deja que Dios calme tu corazón antes de que comience el día.”
 
 hook_pt: equivalente fiel en portugués.
-ej., "Deixe Deus acalmar o seu coração antes de começar o dia."
+Ejemplo: “Deixe Deus acalmar o seu coração antes de começar o dia.”
 
-descricao: 1–3 frases serenas resumiendo el tema y tono.
+descripcion: 1–3 frases serenas que resuman el tema y el tono.
+Debe sonar contemplativa, cinematográfica y emocional.
 
 tags: incluir #Oración #Jesús #EspírituSanto #Biblia
 
-#OraciónDeLaMañana o #OraciónDeLaNoche
-
 2–4 etiquetas temáticas derivadas de {tema} (ej., #Paz #Fe #Guía #Fortaleza #Esperanza).
+
+incluir #OraciónDeLaMañana o #OraciónDeLaNoche según corresponda.
 Hashtags separados por espacios.
 
 ======================================================
@@ -128,53 +150,49 @@ VERIFICACIÓN DE AUTOREVISIÓN
 ✓ Centrado en el tema {tema}
 ✓ Flujo emocional: dolor → entrega → fe → paz
 ✓ Ritmo cinematográfico y tono íntimo
-✓ Título sigue las reglas del Motor de Títulos
-✓ Hooks y descripción coinciden con el título sin repetición
-✓ Total de palabras dentro de la tolerancia (ver abajo) relativo a TARGET_WORDS
-✓ Sin caracteres de escape, sin artefactos de formato
-✓ JSON puro, estructuralmente válido y listo para análisis
+✓ Tres CTAs integrados en los momentos correctos
+✓ Título cumple con las reglas del motor de títulos
+✓ Hooks y descripción coherentes con el título, sin repetición
+✓ Total de palabras dentro de la tolerancia (ver abajo)
+✓ JSON limpio, sin artefactos ni caracteres de escape
 
 ======================================================
 CONTROL DE LONGITUD (OBLIGATORIO)
 
-- TARGET_WORDS definido en PARÁMETROS CONTEXTUALES.
-- Tolerancia absoluta para texto: -5% a +8% de TARGET_WORDS.
+TARGET_WORDS definido en PARÁMETROS CONTEXTUALES.
+
+Tolerancia absoluta para texto: -5% a +8% de TARGET_WORDS.
 
 Ejemplo: si TARGET_WORDS = 3500 → rango válido = 3325–3780 palabras.
-- Objetivos por sección (relativos a TARGET_WORDS):
+
+Proporciones por sección (relativas a TARGET_WORDS):
 
 Dolor: 25%
-
 Entrega: 25%
-
 Fe: 30%
-
 Paz: 20%
-(Cada sección puede variar ±10% de su propia proporción, pero el total debe permanecer en la tolerancia global.)
+(Cada sección puede variar ±10% de su parte, pero el total debe mantenerse dentro de la tolerancia global.)
 
-- Conteo de Palabras Pre-Retorno (requisito obligatorio):
-
+Conteo Previo a la Entrega (obligatorio):
 Componer el texto completo.
-
 Contar palabras del texto completo.
+Si <95% de TARGET_WORDS, expandir naturalmente (Fe/Paz).
+Si >108%, recortar suavemente (Dolor/Entrega).
+Recontar y finalizar solo cuando esté dentro de la ventana.
+Mantener ritmo fluido, frases naturales y coherencia emocional.
 
-Si total < 95% de TARGET_WORDS, expandir orgánicamente (especialmente en Paz/Fe) mientras se preserva la cadencia; no rellenar con contenido vacío.
-
-Si total > 108% de TARGET_WORDS, recortar suavemente (preferiblemente en Dolor/Entrega) sin dañar la coherencia.
-
-Recontar y solo finalizar cuando esté dentro de la ventana -5% a +8%.
-
-Mantener frases cortas y ritmo de párrafo natural durante los ajustes.
-
-NO etiquetar ni numerar secciones en la salida; el movimiento debe ser implícito.
+NO usar etiquetas de sección ni numeración; los movimientos deben sentirse implícitos.
 
 ======================================================
 NOTAS DE PPM/DURACIÓN (SOLO PARA CALIBRACIÓN)
 
-- La narración típica varía entre 120–155 PPM sobre música tranquila.
-- Usar 135 proporcionado para controlar densidad; si 135 es alto, favorecer frases más ajustadas; si es bajo, permitir más imágenes y repeticiones suaves.
-- Si {DURACAO_MINUTOS} y 135 están presentes, SIEMPRE dimensionar por ellos (ignorar {TAMANHO_MAX}).
-- Si solo existe {TAMANHO_MAX}, dimensionar por él y aún así aplicar CONTEO DE PALABRAS PRE-RETORNO.
+La narración típica varía entre 120–155 PPM sobre música suave.
+
+Usar el valor 135 como referencia: si es alto, preferir frases más compactas; si es bajo, permitir más imagen y repetición poética.
+
+Si {DURACAO_MINUTOS} y 135 están presentes, SIEMPRE dimensionar por ellos (ignorar {TAMANHO_MAX}).
+
+Si solo {TAMANHO_MAX} existe, dimensionar por él y aún así verificar el conteo de palabras.
 
 ======================================================
 EJEMPLO DE SALIDA

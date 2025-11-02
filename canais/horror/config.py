@@ -8,7 +8,7 @@ PASTA_BASE = Path(r"E:\Canal Horror")
 PASTA_CANAL = Path(r"C:\Users\mordren\Documents\creator\canais\horror")
 PASTA_VIDEOS = Path(r"E:\Canal Horror\Vídeos")
 MUSICA_LONG = Path(r"C:\Users\mordren\Documents\creator\canais\terror\assets\musica\long.mp3")
-NOME = "Rooftop Whispers "
+NOME = "Rooftop Whispers"
 LINK = "@rooftopwhispers"
 # -------------------------- Parâmetros Comuns --------------------------------------
 IDIOMA = "en"

@@ -67,6 +67,26 @@ class TextGenerator:
             texto_limpo = texto_limpo.replace('\\"', '"').replace('\\\\n', '\n')
             dados["texto"] = texto_limpo.strip()
         return dados
+    
+    def remover_tema_do_arquivo(self, tema: str, arquivo_temas: Path):
+        """Remove um tema específico do arquivo de temas"""
+        try:
+            # Lê todos os temas
+            with open(arquivo_temas, 'r', encoding='utf-8') as f:
+                temas = f.readlines()
+            
+            # Remove o tema específico
+            temas_atualizados = [t.strip() for t in temas if t.strip() != tema]
+            
+            # Reescreve o arquivo sem o tema removido
+            with open(arquivo_temas, 'w', encoding='utf-8') as f:
+                f.write('\n'.join(temas_atualizados) + '\n')
+            
+            print(f"🎲 Tema removido do arquivo: {tema}")
+            print(f"📊 Total de temas restantes: {len(temas_atualizados)}")
+            
+        except Exception as e:
+            print(f"❌ Erro ao remover tema do arquivo: {e}")
 
     def carregar_schema(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Carrega o schema de validação do canal"""
@@ -127,7 +147,8 @@ class TextGenerator:
                     temas = [tema.strip() for tema in temas if tema.strip()]
                     if temas:
                         linha_tema = random.choice(temas)
-                        print(f"🎲 Tema aleatório selecionado: {linha_tema}")
+                        tema_utilizado = linha_tema                     
+                        self.remover_tema_do_arquivo(tema_utilizado, temas_file)                        
                     else:
                         raise ValueError("Arquivo de temas está vazio")
                 else:

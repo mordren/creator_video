@@ -5,6 +5,8 @@ import subprocess
 import tempfile  # ✅ ADICIONAR ESTA LINHA
 import os
 
+import pysrt
+
 # tokenização de "palavra" robusta (acentos + hífen/contração)
 _WORD = re.compile(r"[A-Za-zÀ-ÖØ-öø-ÿ0-9]+(?:[-''][A-Za-zÀ-ÖØ-öø-ÿ0-9]+)?", re.UNICODE)
 
@@ -613,3 +615,50 @@ def verificar_problemas_srt(srt_path: str):
     except Exception as e:
         print(f"❌ Erro ao verificar SRT: {e}")
         return []
+
+def limitar_srt_10_palavras(srt_file):
+    """
+    Limita o arquivo SRT a no máximo 10 palavras por legenda
+    Retorna o caminho do arquivo SRT modificado
+    """
+    try:
+        subs = pysrt.open(srt_file)
+        novos_subs = []
+        
+        for sub in subs:
+            texto = sub.text
+            palavras = texto.split()
+            
+            if len(palavras) <= 10:
+                # Se já tem 10 palavras ou menos, mantém como está
+                novos_subs.append(sub)
+            else:
+                # Divide em grupos de até 10 palavras
+                grupos = [palavras[i:i+10] for i in range(0, len(palavras), 10)]
+                duracao_total = sub.end.ordinal - sub.start.ordinal
+                duracao_por_grupo = duracao_total // len(grupos)
+                
+                for i, grupo in enumerate(grupos):
+                    inicio = sub.start.ordinal + (i * duracao_por_grupo)
+                    fim = inicio + duracao_por_grupo
+                    
+                    # Para o último grupo, usar o tempo final original
+                    if i == len(grupos) - 1:
+                        fim = sub.end.ordinal
+                    
+                    novo_sub = pysrt.SubRipItem(
+                        index=len(novos_subs) + 1,
+                        start=pysrt.SubRipTime(milliseconds=inicio),
+                        end=pysrt.SubRipTime(milliseconds=fim),
+                        text=' '.join(grupo)
+                    )
+                    novos_subs.append(novo_sub)
+        
+        # Salva o arquivo modificado
+        novo_srt = pysrt.SubRipFile(items=novos_subs)
+        novo_srt.save(srt_file, encoding='utf-8')
+        return srt_file
+        
+    except Exception as e:
+        print(f"❌ Erro ao limitar SRT a 10 palavras: {e}")
+        return None

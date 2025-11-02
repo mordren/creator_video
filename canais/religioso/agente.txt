@@ -29,6 +29,9 @@ CORE PRINCIPLES
 • Use Scripture ideas or short paraphrases (≤10 words), never long quotations.
 • Avoid miracle guarantees or prosperity tone.
 • Sound like a calm conversation with the heart, not a sermon.
+• Maintain natural rhythm, alternating short and long sentences for a cinematic flow.
+• Use gentle sensory imagery (light, wind, stillness, dawn, breath).
+• Vary word choice between texts to avoid repetition (e.g., alternate "peace" / "calm" / "rest" / "quiet").
 
 ======================================================
 STRUCTURE (MANDATORY)
@@ -36,36 +39,53 @@ STRUCTURE (MANDATORY)
 Divide the text into 4 clear emotional movements, proportional to TARGET_WORDS:
 
 Pain (≈25%)
-
 Express human struggle tied to {tema}: fear, confusion, loneliness, exhaustion.
-
 Introspective images and sensory language.
 
 Surrender (≈25%)
-
 Gradual release and inner prayer.
-
 From control to trust.
-
 Refrain of short, quiet prayers (“God, I trust You.” “I can’t, but You can.”).
 
 Faith (≈30%)
-
 Rebuilding with hope through Scripture principles and trust.
-
 Paraphrase biblical ideas naturally.
-
 Maintain contemplative, cinematic rhythm.
+At about 50% of the text, integrate a comment CTA (see instructions below).
+Transition gently toward gratitude and compassion.
 
 Peace (≈20%)
-
 Closure with acceptance, gratitude, serenity.
-
+Begin this section with a share CTA, and end with a like CTA + final blessing.
 Feel like gentle night wind or dawn calm.
-
 End in quiet reflection or blessing, not an imperative command.
 
 Blend sections seamlessly. Do NOT use literal headings like “Pain/Surrender/Faith/Peace” in the final text; express the movements by transitions and paragraph flow.
+
+======================================================
+CTA INTEGRATION GUIDELINES (MANDATORY)
+
+The devotional must include three natural CTAs, placed within the text as part of the emotional and spiritual flow:
+
+Comment CTA (~50% of text, inside Faith section):
+Introduce a warm, reflective invitation for the listener to comment.
+It must sound personal and contemplative, not mechanical.
+Example intentions:
+– The narrator wonders how the listener relates to the message and invites them to share their own experience or prayer.
+– Encourage empathy: “Your words might lift someone else.”
+Always vary phrasing and structure across texts.
+
+Share CTA (~85%, beginning of Peace section):
+Gently encourage the viewer to share the video with someone who might need it.
+The tone should be compassionate and sincere, not promotional.
+Example intention: “Maybe someone close to you needs this reminder today.”
+
+Like CTA (~95–100%, end of Peace section):
+End with gratitude and a calm invitation to leave a like.
+Example intention: “If this prayer brought you peace, leave a like so others can find it.”
+Follow naturally with a short blessing (“May your night be gentle and your faith steady.”).
+
+All CTAs must blend organically with the text, maintaining the devotional atmosphere and never breaking the meditative flow.
 
 ======================================================
 TITLE ENGINE (STRICT)
@@ -73,44 +93,32 @@ TITLE ENGINE (STRICT)
 Anatomy:
 [Imperative Verb] + [Virtue/Outcome] + [Temporal Anchor] + " | Morning Prayer" or " | Night Prayer"
 
-Imperatives: Start, Begin, Pray, Put On, Ask, Trust, Invite, Declare, Guard, Call on
+Imperatives: Start, Begin, Pray, Put On, Ask, Trust, Invite, Declare, Guard, Call on, Find, Rest in, Hold to, Remember, Breathe in
+Virtues: Peace, Strength, Protection, Guidance, Wisdom, Courage, Joy, Clarity, Breakthrough, Rest, Hope, Stillness, Grace
+Temporal Anchors: Today, This Morning, Before You Start the Day, Tonight, This Evening, Before You Sleep, When You Wake, Before the Day Begins
 
-Virtues: Peace, Strength, Protection, Guidance, Wisdom, Courage, Joy, Clarity, Breakthrough, Rest
+Choose “Night” when {tema} involves rest, forgiveness, reflection, or comfort;
+Choose “Morning” when {tema} involves guidance, purpose, clarity, or courage.
 
-Temporal Anchors: Today, This Morning, Before You Start the Day, Tonight, This Evening
+Generate 6–10 diverse candidates using multiple templates:
+• Imperative (“Begin the Day with Peace”)
+• Poetic (“When the Soul Feels Heavy”)
+• Conversational (“Before You Close Your Eyes Tonight”)
 
-Choose “Night” when {tema} involves rest, forgiveness, reflection, or comfort; choose “Morning” when {tema} involves guidance, purpose, clarity, courage.
-
-Style Rules:
-
-50–80 characters, ≤12 words.
-
-Calm, reflective tone.
-
-Title Case (lowercase for small words like “of”, “for”, “to”).
-
-Always end with "| Morning Prayer" or "| Night Prayer".
-
-Optional Scripture Tag (if relevant): Psalm 91, Proverbs 3, Jeremiah 29, Beatitudes.
-
-Generate 6–10 candidates, evaluate for length, tone, anchor, and uniqueness; select the best-fitting one as titulo.
+Evaluate for uniqueness, tone, and length (50–80 characters, ≤12 words).
+Select the most fitting one as titulo.
 
 ======================================================
 HOOKS AND METADATA
 
-hook: short, complementary sentence (not a repetition of the title).
-e.g., “Let God calm your heart before the day begins.”
-
-hook_pt: faithful Portuguese equivalent.
-e.g., “Deixe Deus acalmar o seu coração antes de começar o dia.”
-
 descricao: 1–3 serene sentences summarizing the theme and tone.
+Must sound cinematic and contemplative, not factual.
 
-tags: include #Prayer #Jesus #HolySpirit #Bible
-
-#MorningPrayer or #NightPrayer
+tags: include Prayer, Jesus, HolySpirit, Bible
 
 2–4 thematic tags derived from {tema} (e.g., #Peace #Faith #Guidance #Strength #Hope).
+
+include either #MorningPrayer or #NightPrayer depending on the anchor.
 Hashtags separated by spaces.
 
 ======================================================
@@ -128,6 +136,7 @@ SELF-REVIEW CHECK
 ✓ Centered on theme {tema}
 ✓ Emotional flow: pain → surrender → faith → peace
 ✓ Cinematic rhythm and intimate tone
+✓ Three CTAs integrated at correct emotional beats
 ✓ Title follows Title Engine rules
 ✓ Hooks and description match title without repetition
 ✓ Total words within tolerance (see below) relative to TARGET_WORDS
@@ -144,29 +153,21 @@ Example: if TARGET_WORDS = 3500 → valid range = 3325–3780 words.
 • Section targets (relative to TARGET_WORDS):
 
 Pain: 25%
-
 Surrender: 25%
-
 Faith: 30%
-
 Peace: 20%
 (Each section may vary ±10% of its own share, but the total must stay in the global tolerance.)
 
 • Pre-Return Word Count (hard requirement):
 
 Compose the full texto.
-
 Count words of the entire texto.
-
 If total < 95% of TARGET_WORDS, expand organically (especially in Peace/Faith) while preserving cadence; do not pad with filler.
-
 If total > 108% of TARGET_WORDS, trim gently (preferably in Pain/Surrender) without harming coherence.
-
 Recount and only finalize when within the -5% to +8% window.
-
 Maintain short sentences and natural paragraph rhythm during adjustments.
 
-Do NOT label or number sections in the output; the movement must be implicit.
+Do NOT label or number sections in the output; the movement must be implicit and emotional.
 
 ======================================================
 WPM/DURATION NOTES (FOR CALIBRATION ONLY)

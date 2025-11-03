@@ -1,4 +1,5 @@
-# long_filosofia.py - template para vídeos longos 16:9
+
+
 import random
 import re
 import shutil
@@ -269,10 +270,18 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
             accumulated_time = 0.0
             
             for i in range(1, len(clip_files)):
-                offset = max(0.0, accumulated_time - (i * dur_fade))
+                # xfade offset deve começar nos últimos 'dur_fade' segundos
+                # do input 1 (timeline acumulada até o clipe i-1), o que resulta em:
+                #   offset_i = (dur0 + ... + dur{i-1}) - i*dur_fade
+                # usando accumulated_time como soma até i-2, somamos o dur do (i-1)
+                offset = (accumulated_time + clip_durations[i-1]) - (i * dur_fade)
+                if offset < 0:
+                    offset = 0.0
                 output_label = f"xfade{i}"
-                
-                filter_parts.append(f"[{current}][v{i}]xfade=transition=fade:duration={dur_fade:.3f}:offset={offset:.3f}[{output_label}]")
+
+                filter_parts.append(
+                    f"[{current}][v{i}]xfade=transition=fade:duration={dur_fade:.3f}:offset={offset:.3f}[{output_label}]"
+                )
                 current = output_label
                 accumulated_time += clip_durations[i-1]
 

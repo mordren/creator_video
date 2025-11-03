@@ -73,3 +73,20 @@ class RoteiroManager:
             session.delete(roteiro)
             session.commit()
             return True
+        
+    def get_roteiro_completo(self, roteiro_id: int):
+        """Busca roteiro com vídeo relacionado"""
+        statement = select(Roteiro).where(Roteiro.id == roteiro_id)
+        roteiro = self.session.exec(statement).first()
+        return roteiro
+
+    def update_roteiro(self, roteiro_id: int, data: dict):
+        """Atualiza dados do roteiro"""
+        roteiro = self.session.get(Roteiro, roteiro_id)
+        if roteiro:
+            for key, value in data.items():
+                if hasattr(roteiro, key):
+                    setattr(roteiro, key, value)
+            self.session.commit()
+            self.session.refresh(roteiro)
+        return roteiro

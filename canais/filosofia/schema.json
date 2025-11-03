@@ -4,5 +4,11 @@
   "placeholder_tema": "{tema}",
   "placeholder_autor": "{autor}",
   "placeholder_tamanho": "{TAMANHO_MAX}",
-  "exemplo_resposta": "{\"texto\": \"Texto do roteiro aqui...\", \"descricao\": \"Descrição curta\", \"thumb\": \"frase de impacto\", \"tags\": [\"#filosofia\", \"#vida\", \"#reflexão\"]}"
+    "exemplo_resposta": {
+    "texto": "Texto do roteiro aqui...",
+    "descricao": "Descrição curta", 
+    "thumb": "frase de impacto",
+    "tags": ["filosofia, vida, reflexão"]
+  }
 }
+

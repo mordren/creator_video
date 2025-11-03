@@ -5,7 +5,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 from sqlalchemy.orm import joinedload
 from .models import Video, Roteiro
-from .connection import engine, get_session
+from crud.connection import engine, get_session
 from flask_sqlalchemy import SQLAlchemy
 
 
@@ -138,7 +138,7 @@ class VideoManager:
             
             return videos  
         
-    def get_videos_by_roteiro(self, roteiro_id: int):
+    def get_video_by_roteiro(self, roteiro_id: int):
          with get_session() as session:
             # Carrega o vídeo JUNTAMENTE com o roteiro em uma única query
             video = session.query(Video).options(
@@ -146,3 +146,19 @@ class VideoManager:
             ).filter(Video.roteiro_id == roteiro_id).first()
             
             return video
+         
+    def get_videos_by_roteiro(self, roteiro_id: int):
+        statement = select(Video).where(Video.roteiro_id == roteiro_id)
+        videos = self.session.exec(statement).all()
+        return videos
+
+    def update_video(self, video_id: int, data: dict):
+        """Atualiza dados do vídeo"""
+        video = self.session.get(Video, video_id)
+        if video:
+            for key, value in data.items():
+                if hasattr(video, key):
+                    setattr(video, key, value)
+            self.session.commit()
+            self.session.refresh(video)
+        return video

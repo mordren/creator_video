@@ -8,8 +8,8 @@ class VideosController:
         self.video_manager = VideoManager()
 
     def list_videos(self):
-        videos = self.video_manager.get_all_videos()          
-        return videos
+        """Lista todos os vídeos - usa método existente"""
+        return self.video_manager.get_all_videos()
     
     def delete_video(self, video_id: int) -> bool:
         return self.video_manager.deletar(video_id)

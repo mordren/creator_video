@@ -28,7 +28,7 @@
                         {% for video in videos %}
                         <td><strong>{{video.roteiro_id}}</strong></td>
                         <td>
-                            <a href="{{ url_for('video', roteiro_id=video.roteiro_id) }}" class="text-decoration-none">
+                            <a href="{{ url_for('video_detail', roteiro_id=video.roteiro_id) }}" class="text-decoration-none">
                                 {{video.roteiro.titulo|truncate(50) }}
                             </a>          
                         </td>

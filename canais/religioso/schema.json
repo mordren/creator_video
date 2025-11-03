@@ -10,7 +10,7 @@
     "hook": "Let God calm your heart today.",
     "hook_pt": "Deixe Deus acalmar o seu coração hoje.",
     "thumb": "peace morning prayer",
-    "tags": ["#MorningPrayer", "#Prayer", "#Jesus", "#Peace", "#Faith"]
+    "tags": ["MorningPrayer, Prayer, Jesus, Peace, Faith"]
   },
   "instrucoes_output": "Return ONLY pure JSON. Do NOT include markdown, comments, or escaped quotes."
 }

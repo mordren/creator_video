@@ -8,7 +8,7 @@
     "titulo": "Inveja que Mata | Caso Beatriz",
     "descricao": "Um crime chocante em uma festa de formatura. Até onde a inveja pode levar?",
     "hook": "A faca ainda pingava. Ninguém entrou.",
-    "tags": "#truecrime #crime #investigação #inveja",
+    "tags": "truecrime, crime, investigação, inveja",
     "thumb": "faca sangue carpete"
   },
   "instrucoes_output": "Return ONLY pure JSON. Do NOT include markdown, comments, or escaped quotes."

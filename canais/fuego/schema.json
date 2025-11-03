@@ -10,7 +10,7 @@
     "hook": "Deja que Dios calme tu corazón hoy.",
     "hook_pt": "Deixe Deus acalmar o seu coração hoje.",
     "thumb": "paz oración de la mañana",
-    "tags": ["#OraciónDeLaMañana", "#Oración", "#Jesús", "#Paz", "#Fe"]
+    "tags": ["OraciónDeLaMañana, Oración, Jesús, Paz, Fe"]
   },
   "instrucoes_output": "Return ONLY pure JSON. Do NOT include markdown, comments, or escaped quotes."
 }

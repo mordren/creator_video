@@ -2,15 +2,13 @@
 from crud.agendamento_manager import AgendamentoManager
 from crud.youtube_manager import YouTubeManager
 from .roteiro_manager import RoteiroManager
-from .video_manager import VideoManager
 from .canal_manager import CanalManager
 
 class DatabaseManager:
     """Manager unificado para compatibilidade com código existente"""
     
     def __init__(self):
-        self.roteiros = RoteiroManager()
-        self.videos = VideoManager()
+        self.roteiros = RoteiroManager()        
         self.canais = CanalManager()
         self.agendamentos = AgendamentoManager()  # NOVO
         self.youtube = YouTubeManager()
@@ -27,8 +25,7 @@ class DatabaseManager:
     
     def atualizar_roteiro_audio(self, roteiro_id: int, arquivo_audio: str, tts_provider: str, 
                                voz_tts: str, arquivo_legenda: str = None, audio_mixado: str = None):
-        return self.videos.salvar_info_audio(
+        return self.roteiros.salvar_info_audio(
             roteiro_id, arquivo_audio, tts_provider, voz_tts, arquivo_legenda, audio_mixado
-        )
-    
+        )  
     

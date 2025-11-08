@@ -8,7 +8,7 @@ PASTA_BASE = Path(r"G:\Terror\Roteiros")
 PASTA_CANAL = Path(r"C:\Users\mordren\Documents\creator\canais\terror")
 PASTA_VIDEOS = Path(r"G:\Terror\Vídeos")
 MUSICA_SHORT = Path(r"C:\Users\mordren\Documents\creator\canais\terror\assets\musica\ominus.mp3")
-MUSICA_LONG = Path(r"C:\Users\mordren\Documents\creator\canais\terror\assets\musica\long.mp3")
+MUSICA_LONG = Path(r"C:\Users\mordren\Documents\creator\canais\terror\assets\musica\musica copy.mp3")
 NOME = "Garras no Telhado"
 LINK = "@garras_no_telhado"
 # -------------------------- Parâmetros Comuns --------------------------------------

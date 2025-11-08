@@ -14,6 +14,9 @@ def count_words(s: str) -> int:
     """Conta palavras de forma robusta, incluindo acentos e hífens"""
     return len(_WORD.findall(re.sub(r"\s+", " ", s.strip())))
 
+
+
+
 def truncate_words(s: str, n: int) -> str:
     """Trunca texto por número de palavras"""
     out, seen = [], 0
@@ -24,6 +27,19 @@ def truncate_words(s: str, n: int) -> str:
             seen += 1
         out.append(chunk)
     return "".join(out).strip()
+
+def _get_audio_duration(audio_path: str) -> int:
+    """Obtém a duração do áudio em segundos"""
+    try:
+        result = subprocess.run([
+            "ffprobe", "-v", "error", "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1", audio_path
+        ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        return int(float(result.stdout.strip()))
+    except Exception as e:
+        print(f"⚠️ Erro ao obter duração do áudio: {e}")
+        return 0
+
 
 def extract_json_maybe(text: str) -> dict:
     """

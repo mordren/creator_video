@@ -7,7 +7,7 @@ import argparse
 import subprocess
 from pathlib import Path
 
-from utils import limitar_srt_10_palavras
+from utils import _get_audio_duration, limitar_srt_10_palavras
 from video_maker.video_utils import mixar_audio_com_musica
 
 sys.path.append(str(Path(__file__).parent))
@@ -15,8 +15,7 @@ sys.path.append(str(Path(__file__).parent))
 try:
     from read_config import carregar_config_canal
     from providers import create_tts_provider
-    from crud.roteiro_manager import RoteiroManager
-    from crud.video_manager import VideoManager
+    from crud.roteiro_manager import RoteiroManager    
     from crud.canal_manager import CanalManager
     # ✅ NOVA IMPORTAÇÃO
     from utils import otimizar_audio_e_legenda, vertical_horizontal
@@ -26,27 +25,12 @@ except ImportError as e:
 
 class AudioSystem:
     def __init__(self):
-        self.roteiro_manager = RoteiroManager()
-        self.video_manager = VideoManager()
+        self.roteiro_manager = RoteiroManager()        
         self.canal_manager = CanalManager()
 
-    def _get_audio_duration(self, audio_path: str) -> int:
-        """Obtém a duração do áudio em segundos"""
-        try:
-            result = subprocess.run([
-                "ffprobe", "-v", "error", "-show_entries", "format=duration",
-                "-of", "default=noprint_wrappers=1:nokey=1", audio_path
-            ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-            return int(float(result.stdout.strip()))
-        except Exception as e:
-            print(f"⚠️ Erro ao obter duração do áudio: {e}")
-            return 0
-
-    def generate_audio(self, roteiro_id: int, provider: str = None) -> bool:
-        """Gera áudio para um roteiro pelo ID do banco"""
+    def generate_audio(self, roteiro_id: int, provider: str = None) -> bool:        
         print(f"🎵 Gerando áudio para roteiro ID: {roteiro_id}")
         
-        # Busca roteiro no banco
         roteiro = self.roteiro_manager.buscar_por_id(roteiro_id)
         if not roteiro:
             print(f"❌ Roteiro com ID {roteiro_id} não encontrado")
@@ -74,8 +58,7 @@ class AudioSystem:
             with open(arquivo_json, 'r', encoding='utf-8') as f:
                 data = json.load(f)
         else:
-            data = {}
-        
+            data = {}        
             data = json.load(f)
         
         # Extrai texto
@@ -91,14 +74,15 @@ class AudioSystem:
         print(f"📝 {len(text)} chars | 🔊 {provider} | 📺 {data.get('titulo', 'Sem título')}")
         print(f"📁 Pasta: {pasta_video}")
                 
-                # Verifica se é short (vertical) antes de otimizar        
         resolucao = data.get('resolucao', config.get('RESOLUCAO', '1920x1080'))
         is_short = (vertical_horizontal(resolucao) == "vertical")
 
         tts = create_tts_provider(provider)
-        success = tts.sintetizar(text, audio_file, config, is_short)
+        if provider == "gemini":
+            success = tts.sintetizar(text, audio_file, config)
+        else:
+            success = tts.sintetizar(text, audio_file, config, is_short)
         
-        # ✅ MODIFICADO: Otimizar áudio APENAS para shorts (vídeos verticais)
         srt_file = None
         if provider == "edge" and config.get('EDGE_TTS_LEGENDAS', False):
             srt_file = Path(audio_file).with_suffix('.srt')
@@ -203,10 +187,10 @@ class AudioSystem:
             self.roteiro_manager.marcar_audio_gerado(roteiro.id)
             
             # Obtém duração do áudio mixado
-            duracao = self._get_audio_duration(mixado)
+            duracao = _get_audio_duration(mixado)
             
             # Salva informações do áudio usando o VideoManager
-            success = self.video_manager.salvar_info_audio(
+            success = self.roteiro_manager.salvar_info_audio(
                 roteiro_id=roteiro.id,
                 arquivo_audio=audio_file,
                 tts_provider=provider,

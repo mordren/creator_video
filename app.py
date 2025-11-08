@@ -1,17 +1,16 @@
-# Importar a classe Flask
-
+# app.py
+import os
 from flask import Flask, flash, redirect, render_template, request, url_for
-
-# Criar uma instância do Flask (o app)
-app = Flask(__name__)
-app.secret_key = 'sua_chave_secreta_aqui'
 
 from controllers.video_controller import VideoController
 from controllers.videos_controller import VideosController
-from crud.video_manager import VideoManager
+from controllers.video_form_validator import VideoFormValidator  # <- usar o validador
 
-# Definir uma rota básica
-videos_controller = VideosController() 
+app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "dev-only-change-me")  # não deixe fixo em PROD
+
+videos_controller = VideosController()
+video_controller = VideoController()
 
 @app.route('/')
 def home():
@@ -19,53 +18,39 @@ def home():
 
 @app.route('/videos')
 def videos():
-    videos = videos_controller.list_videos()
-    return render_template('videos.html', videos = videos)
+    roteiros = videos_controller.list_roteiros()
+    return render_template('videos.html', roteiros=roteiros)
 
 @app.route('/video/<int:roteiro_id>', methods=['GET', 'POST'])
-def video_detail(roteiro_id):
-    """Rota única para visualizar e editar vídeo usando video.html"""
-    controller = VideoController()
-    
+def video_detail(roteiro_id: int):
+    roteiro = video_controller.get_roteiro(roteiro_id)
+    if not roteiro:
+        flash("Vídeo não encontrado", "error")
+        return redirect(url_for('videos'))
+
     if request.method == 'POST':
-        # Modo edição - salvar alterações
         try:
-            controller.update_roteiro_and_video(roteiro_id, request.form)
+            # ✅ parse/validação centralizados
+            roteiro_data = VideoFormValidator.validate_and_extract(request.form)
+            video_controller.update_roteiro_and_video(roteiro_id, roteiro_data)
             flash("Alterações salvas com sucesso!", "success")
             return redirect(url_for('video_detail', roteiro_id=roteiro_id))
         except Exception as e:
-            flash(f"Erro ao salvar: {str(e)}", "error")
-            # Em caso de erro, recarrega a página em modo edição
-            video = controller.get_video(roteiro_id)
-            if video:
-                return render_template('video.html', video=video, error=True)
-            else:
-                return redirect(url_for('videos'))
-    
-    # Modo GET - carregar dados
-    video = controller.get_video(roteiro_id)
-    
-    if not video:
-        flash("Vídeo não encontrado", "error")
-        return redirect(url_for('videos'))
-    
-    # Verifica se deve mostrar em modo edição
-    edit_mode = request.args.get('edit') == '1'
-    return render_template('video.html', video=video, edit_mode=edit_mode)
+            flash(f"Erro ao salvar: {e}", "error")
+            return render_template('video.html', roteiro=roteiro, error=True)
 
-# Rota para deletar vídeo (se necessário)
+    edit_mode = request.args.get('edit') == '1'
+    return render_template('video.html', roteiro=roteiro, edit_mode=edit_mode)
+
 @app.route('/video/<int:video_id>/delete', methods=['POST'])
-def delete_video(video_id):
-    """Rota para deletar um vídeo"""
-    controller = VideosController()
+def delete_video(video_id: int):
     try:
-        if controller.delete_video(video_id):
+        if videos_controller.delete_video(video_id):
             flash("Vídeo deletado com sucesso!", "success")
         else:
             flash("Erro ao deletar vídeo", "error")
     except Exception as e:
-        flash(f"Erro ao deletar: {str(e)}", "error")
-    
+        flash(f"Erro ao deletar: {e}", "error")
     return redirect(url_for('videos'))
 
 if __name__ == '__main__':

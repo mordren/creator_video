@@ -1,8 +1,8 @@
-# crud/youtube_manager.py
+
 from sqlmodel import Session, select, text
 from typing import Optional
 from datetime import datetime
-from .models import VideoYouTube, TipoConteudo, Video
+from .models import VideoYouTube, TipoConteudo
 from .connection import engine
 
 class YouTubeManager:

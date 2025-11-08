@@ -193,7 +193,7 @@ def render(audio_path: str, config: dict, roteiro) -> Path:
         cwd=temp_dir, 
         capture_output=True, 
         text=True, 
-        timeout=300
+        timeout=600
     )
 
     # Verificar se o vídeo foi criado

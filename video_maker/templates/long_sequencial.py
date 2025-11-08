@@ -104,5 +104,5 @@ if __name__ == '__main__':
     roteiro_manager = RoteiroManager()
     roteiro = roteiro_manager.buscar_por_id(126)
 
-    result = render(r"G:\Brsemfim\Roteiros\1\1.mp3", {}, "teste")
+    result = render(, {}, "teste")
     print(f"Resultado: {result}")

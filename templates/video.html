@@ -4,7 +4,7 @@
 
 {% block content %}
 
-<!-- templates/video.html -->
+<!-- templates/roteiro.html -->
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0">
@@ -17,7 +17,7 @@
         <div>
             <!-- BOTÃO EDITAR - SEMPRE VISÍVEL NO MODO DE VISUALIZAÇÃO -->
             {% if not edit_mode %}
-            <a href="{{ url_for('video_detail', roteiro_id=video.roteiro_id) }}?edit=1" 
+            <a href="{{ url_for('video_detail', roteiro_id=roteiro.id) }}?edit=1" 
                class="btn btn-primary me-2">
                 <i class="fas fa-edit"></i> Editar
             </a>
@@ -33,7 +33,7 @@
                 <button type="submit" form="edit-form" class="btn btn-success">
                     <i class="fas fa-save"></i> Salvar
                 </button>
-                <a href="{{ url_for('video_detail', roteiro_id=video.roteiro_id) }}" 
+                <a href="{{ url_for('video_detail', roteiro_id=roteiro.id) }}" 
                    class="btn btn-secondary">
                     <i class="fas fa-times"></i> Cancelar
                 </a>
@@ -43,7 +43,7 @@
     </div>
     
     <div class="card-body">
-        <form id="edit-form" method="POST" action="{{ url_for('video_detail', roteiro_id=video.roteiro_id) }}">
+        <form id="edit-form" method="POST" action="{{ url_for('video_detail', roteiro_id=roteiro.id) }}">
             <div class="row">
                 <!-- Coluna 1: Informações Básicas do Roteiro -->
                 <div class="col-md-6">
@@ -51,16 +51,16 @@
                     
                     <div class="mb-3">
                         <label class="form-label"><strong>Roteiro ID</strong></label>
-                        <p class="form-control-plaintext">{{ video.roteiro_id }}</p>
+                        <p class="form-control-plaintext">{{ roteiro.id }}</p>
                     </div>
                     
                     <div class="mb-3">
                         <label class="form-label"><strong>Título</strong></label>
                         {% if edit_mode %}
                         <input type="text" class="form-control" name="titulo" 
-                               value="{{ video.roteiro.titulo }}" required>
+                               value="{{ roteiro.titulo }}" required>
                         {% else %}
-                        <p class="form-control-plaintext">{{ video.roteiro.titulo }}</p>
+                        <p class="form-control-plaintext">{{ roteiro.titulo }}</p>
                         {% endif %}
                     </div>
 
@@ -69,11 +69,11 @@
                         <label class="form-label"><strong>Texto do Roteiro</strong></label>
                         {% if edit_mode %}
                         <textarea class="form-control" name="texto" rows="15" 
-                                  placeholder="Digite o texto completo do roteiro aqui...">{{ video.roteiro.texto }}</textarea>
+                                  placeholder="Digite o texto completo do roteiro aqui...">{{ roteiro.texto }}</textarea>
                         <small class="text-muted">Use este campo para editar todo o conteúdo do roteiro</small>
                         {% else %}
                         <div class="form-control-plaintext" style="max-height: 400px; overflow-y: auto; white-space: pre-wrap; background-color: #f8f9fa; padding: 12px; border-radius: 4px;">
-                            {{ video.roteiro.texto }}
+                            {{ roteiro.texto }}
                         </div>
                         {% endif %}
                     </div>
@@ -81,9 +81,9 @@
                     <div class="mb-3">
                         <label class="form-label"><strong>Descrição</strong></label>
                         {% if edit_mode %}
-                        <textarea class="form-control" name="descricao" rows="3">{{ video.roteiro.descricao }}</textarea>
+                        <textarea class="form-control" name="descricao" rows="3">{{ roteiro.descricao }}</textarea>
                         {% else %}
-                        <p class="form-control-plaintext">{{ video.roteiro.descricao }}</p>
+                        <p class="form-control-plaintext">{{ roteiro.descricao }}</p>
                         {% endif %}
                     </div>
 
@@ -91,9 +91,9 @@
                         <label class="form-label"><strong>Tags</strong></label>
                         {% if edit_mode %}
                         <input type="text" class="form-control" name="tags" 
-                               value="{{ video.roteiro.tags }}" placeholder="tag1, tag2, tag3">
+                               value="{{ roteiro.tags }}" placeholder="tag1, tag2, tag3">
                         {% else %}
-                        <p class="form-control-plaintext">{{ video.roteiro.tags }}</p>
+                        <p class="form-control-plaintext">{{ roteiro.tags }}</p>
                         {% endif %}
                     </div>
                 </div>
@@ -106,21 +106,21 @@
                         <label class="form-label"><strong>Status Upload</strong></label>
                         {% if edit_mode %}
                         <select class="form-select" name="status_upload">
-                            <option value="rascunho" {{ 'selected' if video.status_upload == 'rascunho' }}>Rascunho</option>
-                            <option value="enviando" {{ 'selected' if video.status_upload == 'enviando' }}>Enviando</option>
-                            <option value="publicado" {{ 'selected' if video.status_upload == 'publicado' }}>Publicado</option>
-                            <option value="erro" {{ 'selected' if video.status_upload == 'erro' }}>Erro</option>
+                            <option value="rascunho" {{ 'selected' if roteiro.status_upload == 'rascunho' }}>Rascunho</option>
+                            <option value="enviando" {{ 'selected' if roteiro.status_upload == 'enviando' }}>Enviando</option>
+                            <option value="publicado" {{ 'selected' if roteiro.status_upload == 'publicado' }}>Publicado</option>
+                            <option value="erro" {{ 'selected' if roteiro.status_upload == 'erro' }}>Erro</option>
                         </select>
                         {% else %}
                         <p>
-                            {% if video.status_upload == 'rascunho' %}
+                            {% if roteiro.status_upload == 'rascunho' %}
                                 <span class="badge bg-warning">Rascunho</span>
-                            {% elif video.status_upload == 'enviando' %}
+                            {% elif roteiro.status_upload == 'enviando' %}
                                 <span class="badge bg-info">Enviando</span>
-                            {% elif video.status_upload == 'publicado' %}
+                            {% elif roteiro.status_upload == 'publicado' %}
                                 <span class="badge bg-success">Publicado</span>
                             {% else %}
-                                <span class="badge bg-danger">{{ video.status_upload }}</span>
+                                <span class="badge bg-danger">{{ roteiro.status_upload }}</span>
                             {% endif %}
                         </p>
                         {% endif %}
@@ -130,24 +130,24 @@
                         <label class="form-label"><strong>ID do Vídeo</strong></label>
                         {% if edit_mode %}
                         <input type="text" class="form-control" name="id_video" 
-                               value="{{ video.roteiro.id_video }}">
+                               value="{{ roteiro.id }}">
                         {% else %}
-                        <p class="form-control-plaintext">{{ video.roteiro.id_video }}</p>
+                        <p class="form-control-plaintext">{{ roteiro.id }}</p>
                         {% endif %}
                     </div>
                     
                     <div class="mb-3">
                         <label class="form-label"><strong>Data Criação</strong></label>
-                        <p class="form-control-plaintext">{{ video.data_criacao.strftime('%d/%m/%Y %H:%M') }}</p>
+                        <p class="form-control-plaintext">{{ roteiro.data_criacao.strftime('%d/%m/%Y %H:%M') }}</p>
                     </div>
                     
                     <div class="mb-3">
                         <label class="form-label"><strong>TTS Provider</strong></label>
                         {% if edit_mode %}
                         <input type="text" class="form-control" name="tts_provider" 
-                               value="{{ video.tts_provider }}">
+                               value="{{ roteiro.tts_provider }}">
                         {% else %}
-                        <p class="form-control-plaintext">{{ video.tts_provider }}</p>
+                        <p class="form-control-plaintext">{{ roteiro.tts_provider }}</p>
                         {% endif %}
                     </div>
                     
@@ -155,9 +155,9 @@
                         <label class="form-label"><strong>Voz TTS</strong></label>
                         {% if edit_mode %}
                         <input type="text" class="form-control" name="voz_tts" 
-                               value="{{ video.voz_tts }}">
+                               value="{{ roteiro.voz_tts }}">
                         {% else %}
-                        <p class="form-control-plaintext">{{ video.voz_tts }}</p>
+                        <p class="form-control-plaintext">{{ roteiro.voz_tts }}</p>
                         {% endif %}
                     </div>
 
@@ -165,9 +165,9 @@
                         <label class="form-label"><strong>Duração</strong></label>
                         {% if edit_mode %}
                         <input type="number" class="form-control" name="duracao" 
-                               value="{{ video.duracao }}">
+                               value="{{ roteiro.duracao }}">
                         {% else %}
-                        <p class="form-control-plaintext">{{ video.duracao }} segundos</p>
+                        <p class="form-control-plaintext">{{ roteiro.duracao }} segundos</p>
                         {% endif %}
                     </div>
 
@@ -175,9 +175,9 @@
                         <label class="form-label"><strong>Visualizações</strong></label>
                         {% if edit_mode %}
                         <input type="number" class="form-control" name="visualizacao_total" 
-                               value="{{ video.visualizacao_total }}">
+                               value="{{ roteiro.visualizacao_total }}">
                         {% else %}
-                        <p class="form-control-plaintext">{{ video.visualizacao_total }}</p>
+                        <p class="form-control-plaintext">{{ roteiro.visualizacao_total }}</p>
                         {% endif %}
                     </div>
 
@@ -188,12 +188,12 @@
                                 <label class="form-label"><strong>Áudio Gerado</strong></label>
                                 {% if edit_mode %}
                                 <select class="form-select" name="audio_gerado">
-                                    <option value="true" {{ 'selected' if video.roteiro.audio_gerado }}>Sim</option>
-                                    <option value="false" {{ 'selected' if not video.roteiro.audio_gerado }}>Não</option>
+                                    <option value="true" {{ 'selected' if roteiro.audio_gerado }}>Sim</option>
+                                    <option value="false" {{ 'selected' if not roteiro.audio_gerado }}>Não</option>
                                 </select>
                                 {% else %}
-                                <span class="badge bg-{{ 'success' if video.roteiro.audio_gerado else 'secondary' }}">
-                                    {{ 'Sim' if video.roteiro.audio_gerado else 'Não' }}
+                                <span class="badge bg-{{ 'success' if roteiro.audio_gerado else 'secondary' }}">
+                                    {{ 'Sim' if roteiro.audio_gerado else 'Não' }}
                                 </span>
                                 {% endif %}
                             </div>
@@ -203,12 +203,12 @@
                                 <label class="form-label"><strong>Vídeo Gerado</strong></label>
                                 {% if edit_mode %}
                                 <select class="form-select" name="video_gerado">
-                                    <option value="true" {{ 'selected' if video.roteiro.video_gerado }}>Sim</option>
-                                    <option value="false" {{ 'selected' if not video.roteiro.video_gerado }}>Não</option>
+                                    <option value="true" {{ 'selected' if roteiro.video_gerado }}>Sim</option>
+                                    <option value="false" {{ 'selected' if not roteiro.video_gerado }}>Não</option>
                                 </select>
                                 {% else %}
-                                <span class="badge bg-{{ 'success' if video.roteiro.video_gerado else 'secondary' }}">
-                                    {{ 'Sim' if video.roteiro.video_gerado else 'Não' }}
+                                <span class="badge bg-{{ 'success' if roteiro.video_gerado else 'secondary' }}">
+                                    {{ 'Sim' if roteiro.video_gerado else 'Não' }}
                                 </span>
                                 {% endif %}
                             </div>
@@ -218,12 +218,12 @@
                                 <label class="form-label"><strong>Finalizado</strong></label>
                                 {% if edit_mode %}
                                 <select class="form-select" name="finalizado">
-                                    <option value="true" {{ 'selected' if video.roteiro.finalizado }}>Sim</option>
-                                    <option value="false" {{ 'selected' if not video.roteiro.finalizado }}>Não</option>
+                                    <option value="true" {{ 'selected' if roteiro.finalizado }}>Sim</option>
+                                    <option value="false" {{ 'selected' if not roteiro.finalizado }}>Não</option>
                                 </select>
                                 {% else %}
-                                <span class="badge bg-{{ 'success' if video.roteiro.finalizado else 'secondary' }}">
-                                    {{ 'Sim' if video.roteiro.finalizado else 'Não' }}
+                                <span class="badge bg-{{ 'success' if roteiro.finalizado else 'secondary' }}">
+                                    {{ 'Sim' if roteiro.finalizado else 'Não' }}
                                 </span>
                                 {% endif %}
                             </div>
@@ -241,9 +241,9 @@
                     <label class="form-label"><small>Áudio:</small></label>
                     {% if edit_mode %}
                     <input type="text" class="form-control" name="arquivo_audio" 
-                           value="{{ video.arquivo_audio }}">
+                           value="{{ roteiro.arquivo_audio }}">
                     {% else %}
-                    <p class="form-control-plaintext text-truncate"><small>{{ video.arquivo_audio }}</small></p>
+                    <p class="form-control-plaintext text-truncate"><small>{{ roteiro.arquivo_audio }}</small></p>
                     {% endif %}
                 </div>
                 
@@ -251,9 +251,9 @@
                     <label class="form-label"><small>Vídeo:</small></label>
                     {% if edit_mode %}
                     <input type="text" class="form-control" name="arquivo_video" 
-                           value="{{ video.arquivo_video }}">
+                           value="{{ roteiro.arquivo_video }}">
                     {% else %}
-                    <p class="form-control-plaintext text-truncate"><small>{{ video.arquivo_video }}</small></p>
+                    <p class="form-control-plaintext text-truncate"><small>{{ roteiro.arquivo_video }}</small></p>
                     {% endif %}
                 </div>
                 
@@ -261,9 +261,9 @@
                     <label class="form-label"><small>Legenda:</small></label>
                     {% if edit_mode %}
                     <input type="text" class="form-control" name="arquivo_legenda" 
-                           value="{{ video.arquivo_legenda }}">
+                           value="{{ roteiro.arquivo_legenda }}">
                     {% else %}
-                    <p class="form-control-plaintext text-truncate"><small>{{ video.arquivo_legenda }}</small></p>
+                    <p class="form-control-plaintext text-truncate"><small>{{ roteiro.arquivo_legenda }}</small></p>
                     {% endif %}
                 </div>
                 
@@ -271,9 +271,9 @@
                     <label class="form-label"><small>Áudio Mixado:</small></label>
                     {% if edit_mode %}
                     <input type="text" class="form-control" name="audio_mixado" 
-                           value="{{ video.audio_mixado }}">
+                           value="{{ roteiro.audio_mixado }}">
                     {% else %}
-                    <p class="form-control-plaintext text-truncate"><small>{{ video.audio_mixado }}</small></p>
+                    <p class="form-control-plaintext text-truncate"><small>{{ roteiro.audio_mixado }}</small></p>
                     {% endif %}
                 </div>
             </div>

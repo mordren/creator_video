@@ -1,15 +1,14 @@
 
 
-from crud.video_manager import VideoManager
-
+from crud.roteiro_manager import RoteiroManager
 
 class VideosController:
     def __init__(self):
-        self.video_manager = VideoManager()
+        self.roteiro = RoteiroManager()
 
-    def list_videos(self):
+    def list_roteiros(self):
         """Lista todos os vídeos - usa método existente"""
-        return self.video_manager.get_all_videos()
+        return self.roteiro.get_all_Roteiros()
     
     def delete_video(self, video_id: int) -> bool:
-        return self.video_manager.deletar(video_id)
+        return self.roteiro.deletar(video_id)

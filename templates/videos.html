@@ -4,7 +4,6 @@
 
 {% block content %}
 
-
 <h1 class="mb-4">Lista de Vídeos</h1>
 <div class="card">
     <div class="card-body">
@@ -25,19 +24,19 @@
                 <tbody>
                     <!-- Exemplo de linha 1 -->
                     <tr>
-                        {% for video in videos %}
-                        <td><strong>{{video.roteiro_id}}</strong></td>
-                        <td>
-                            <a href="{{ url_for('video_detail', roteiro_id=video.roteiro_id) }}" class="text-decoration-none">
-                                {{video.roteiro.titulo|truncate(50) }}
+                        {% for roteiro in roteiros %}
+                        <td><strong>{{roteiro.id}}</strong></td>
+                        <td>                            
+                            <a href="{{ url_for('video_detail', roteiro_id=roteiro.id) }}" class="text-decoration-none">
+                                {{roteiro.titulo|truncate(50) }}
                             </a>          
                         </td>
                         
                         <td>
-                            {{ video.roteiro.canal_obj.nome }}
+                            {{ roteiro.canal_obj.nome }}
                         </td>
                         <td>                           
-                            {% if video.roteiro.resolucao == "720x1280" %}
+                            {% if roteiro.resolucao == "720x1280" %}
                             <span class="badge bg-purple">Short</span>                                    
                             {% else %}
                                 <span class="badge bg-orange">Long</span>
@@ -45,25 +44,25 @@
                         </td>
                         <td>
                             
-                            {% if video.roteiro.audio_gerado %}
+                            {% if roteiro.audio_gerado %}
                                 <span class="badge bg-success"><i class="fas fa-check"></i></span>
                             {% else %}
                                 <span class="badge bg-danger"><i class="fas fa-times"></i></span>
                             {% endif %}
                         </td>
                         <td>
-                            {% if video.roteiro.video_gerado %}
+                            {% if roteiro.video_gerado %}
                                 <span class="badge bg-success"><i class="fas fa-check"></i></span>
                             {% else %}
                                 <span class="badge bg-danger"><i class="fas fa-times"></i></span>
                             {% endif %}
                         </td>
                         <td>
-                            {% if video.roteiro.data_criacao %}
-                                {% if video.roteiro.data_criacao is string %}
-                                    {{ video.roteiro.data_criacao[:10] }}
+                            {% if roteiro.data_criacao %}
+                                {% if roteiro.data_criacao is string %}
+                                    {{ roteiro.data_criacao[:10] }}
                                 {% else %}
-                                    {{ video.roteiro.data_criacao.strftime('%d/%m/%Y') }}
+                                    {{ roteiro.data_criacao.strftime('%d/%m/%Y') }}
                                 {% endif %}                            
                             {% endif %}</td>
                         <td>
@@ -71,7 +70,7 @@
                                 <a href="#" class="btn btn-primary" title="Editar Vídeo">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <button class="btn btn-outline-danger delete-video" data-video-id="{{ video.id }}" title="Excluir Vídeo">
+                                <button class="btn btn-outline-danger delete-video" data-video-id="{{ roteiro.id }}" title="Excluir Vídeo">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>

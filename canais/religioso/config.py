@@ -5,9 +5,9 @@
 from pathlib import Path
 
 # -------------------------- Pastas -------------------------------------------------
-PASTA_BASE = Path(r"E:\Canal Religioso\roteiros")
+PASTA_BASE = Path(r"G:\Religioso\roteiros")
 PASTA_CANAL = Path(r"C:\Users\mordren\Documents\creator\canais\Religioso")
-PASTA_VIDEOS = Path(r"G:\Regioso\Videos")
+PASTA_VIDEOS = Path(r"G:\Religioso\Videos")
 VIDEOS_DIR = Path(r"C:\Users\mordren\Documents\creator\canais\Religioso\assets\videos")
 NOME = "Hope in Every Verse"
 LINK = "@hope_in_every_verse"
@@ -52,4 +52,4 @@ RESOLUCAO = "1280x720"
 FPS = 60
 FONTE = "Montserrat-Black"
 TAMANHO_FONTE = 90
-MUSICA = Path(r"C:\Users\mordren\Documents\creator\canais\Hope in Every Verse\assets\music\musica.mp3")
+MUSICA_LONG = Path(r"C:\Users\mordren\Documents\creator\canais\religioso\assets\music\musica.mp3")

@@ -1,8 +1,9 @@
+
 from sqlmodel import SQLModel, Field, Relationship, select
 from typing import Optional, List
 from datetime import date, datetime
 from enum import Enum
-from sqlalchemy import Text
+from sqlalchemy import Text, ForeignKey
 from sqlalchemy.orm import relationship
 
 # Importa a conexão centralizada
@@ -42,27 +43,9 @@ class Roteiro(SQLModel, table=True):
     tags: str = Field(sa_type=Text)
     thumb: str = Field(sa_type=Text)
     canal_id: int = Field(foreign_key="canal.id")
-    canal_obj: Canal = Relationship(back_populates="roteiros")
-    audio_gerado: bool = False
-    video_gerado: bool = False
-    finalizado: bool = False
-    data_criacao: datetime = Field(default_factory=datetime.now)
-    resolucao: Optional[str] = Field(default="vertical", sa_type=Text) 
+    canal_obj: Optional["Canal"] = Relationship(back_populates="roteiros")
     
-    # Relação 1:1 com Video com cascade delete
-    video: Optional["Video"] = Relationship(
-        back_populates="roteiro",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
-    )
-
-class Video(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    roteiro_id: int = Field(
-        foreign_key="roteiro.id", 
-        unique=True
-    )
-    
-    # Metadados do vídeo    
+    # Campos de processamento de vídeo (antiga tabela Video)
     arquivo_audio: Optional[str] = Field(default=None, sa_type=Text)
     arquivo_legenda: Optional[str] = Field(default=None, sa_type=Text)
     arquivo_video: Optional[str] = Field(default=None, sa_type=Text)
@@ -70,23 +53,38 @@ class Video(SQLModel, table=True):
     tts_provider: Optional[str] = Field(default=None, sa_type=Text)
     voz_tts: Optional[str] = Field(default=None, sa_type=Text)
     duracao: Optional[int] = Field(default=None)
+    
+    # Status e flags
+    audio_gerado: bool = False
+    video_gerado: bool = False
+    finalizado: bool = False
     status_upload: StatusUpload = Field(default=StatusUpload.RASCUNHO)
     
+    # Métricas
     visualizacao_total: int = Field(default=0)
+    
+    # Configurações
+    resolucao: Optional[str] = Field(default="vertical", sa_type=Text)
     data_criacao: datetime = Field(default_factory=datetime.now)
     
-    # Relações com cascade
-    roteiro: "Roteiro" = Relationship(back_populates="video")
+    # Relação com YouTube - CORRIGIDA
     youtube: Optional["VideoYouTube"] = Relationship(
-        back_populates="video",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
-    )    
+        back_populates="roteiro_obj",
+        sa_relationship_kwargs={
+            "cascade": "all, delete-orphan",
+            "uselist": False  # Para relação 1:1
+        }
+    )
+    
+    # Relação com agendamentos
+    agendamentos: List["Agendamento"] = Relationship(back_populates="roteiro_obj")
 
 class VideoYouTube(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    video_id: int = Field(
-        foreign_key="video.id", 
-        unique=True
+    roteiro_id: int = Field(
+        foreign_key="roteiro.id", 
+        unique=True,
+        nullable=False
     )
     
     # Link do vídeo no YouTube
@@ -106,12 +104,12 @@ class VideoYouTube(SQLModel, table=True):
     tipo_conteudo: TipoConteudo = Field(default=TipoConteudo.SHORT)
     
     # Relação corrigida
-    video: "Video" = Relationship(back_populates="youtube")
+    roteiro_obj: Optional["Roteiro"] = Relationship(back_populates="youtube")
 
 
 class Agendamento(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    video_id: int = Field(foreign_key="roteiro.id")
+    roteiro_id: int = Field(foreign_key="roteiro.id")
     plataformas: str  # JSON string para armazenar múltiplas plataformas
     data_publicacao: str  # YYYY-MM-DD
     hora_publicacao: str  # HH:MM
@@ -121,11 +119,15 @@ class Agendamento(SQLModel, table=True):
     # Campos de auditoria
     data_criacao: datetime = Field(default_factory=datetime.utcnow)
     data_atualizacao: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Relação com roteiro
+    roteiro_obj: Optional["Roteiro"] = Relationship(back_populates="agendamentos")
 
 class AgendamentoExecutado(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     agendamento_id: int = Field(foreign_key="agendamento.id")
-    data_execucao: Optional[datetime] = Field(default=None)  # data em que foi executado
+    data_execucao: Optional[datetime] = Field(default=None)
     roteiro_id: int = Field(foreign_key="roteiro.id")
     sucesso: bool = True
     data_criacao: datetime = Field(default_factory=datetime.now)
+

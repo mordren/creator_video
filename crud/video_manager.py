@@ -1,44 +1,44 @@
-# crud/video_manager.py
+# crud/Roteiro_manager.py
 from flask import session
 from sqlmodel import Session, desc, select
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from sqlalchemy.orm import joinedload
-from .models import Video, Roteiro
+from .models import Roteiro
 from crud.connection import engine, get_session
 from flask_sqlalchemy import SQLAlchemy
 
 
-class VideoManager:
+class RoteiroManager:
     def __init__(self):
         self.engine = engine
     
     # --- CRUD Básico ---
-    def criar(self, video: Video) -> Video:
-        """Cria um novo vídeo a partir de um objeto Video"""
+    def criar(self, Roteiro: str) -> Roteiro:
+        """Cria um novo vídeo a partir de um objeto Roteiro"""
         with Session(self.engine) as session:
-            session.add(video)
+            session.add(Roteiro)
             session.commit()
-            session.refresh(video)
-            return video
+            session.refresh(Roteiro)
+            return Roteiro
     
-    def buscar_por_id(self, video_id: int) -> Optional[Video]:
+    def buscar_por_id(self, Roteiro_id: int) -> Optional[Roteiro]:
         """Busca vídeo pelo ID do banco"""
         with Session(self.engine) as session:
-            return session.get(Video, video_id)
+            return session.get(Roteiro, Roteiro_id)
     
-    def buscar_por_roteiro_id(self, roteiro_id: int) -> Optional[Video]:
+    def buscar_por_roteiro_id(self, roteiro_id: int) -> Optional[Roteiro]:
         """Busca vídeo associado a um roteiro específico"""
         with Session(self.engine) as session:
-            statement = select(Video).where(Video.roteiro_id == roteiro_id)
+            statement = select(Roteiro).where(Roteiro.roteiro_id == roteiro_id)
             return session.exec(statement).first()
     
-    def deletar(self, video_id: int) -> bool:
+    def deletar(self, Roteiro_id: int) -> bool:
         """Remove um vídeo do banco"""
         with Session(self.engine) as session:
-            video = session.get(Video, video_id)
-            if video:
-                session.delete(video)
+            Roteiro = session.get(Roteiro, Roteiro_id)
+            if Roteiro:
+                session.delete(Roteiro)
                 session.commit()
                 return True
             return False
@@ -47,26 +47,26 @@ class VideoManager:
     def salvar_info(self, roteiro_id: int, **dados: Dict[str, Any]) -> bool:
         """
         Salva ou atualiza informações do vídeo para um roteiro.
-        Aceita qualquer campo do modelo Video como argumento nomeado.
+        Aceita qualquer campo do modelo Roteiro como argumento nomeado.
         """
         with Session(self.engine) as session:
             try:
                 # Busca vídeo existente dentro da mesma sessão
-                statement = select(Video).where(Video.roteiro_id == roteiro_id)
-                video = session.exec(statement).first()
+                statement = select(Roteiro).where(Roteiro.roteiro_id == roteiro_id)
+                Roteiro = session.exec(statement).first()
                 
-                if video:
+                if Roteiro:
                     # Atualiza vídeo existente
-                    print(f"📹 Atualizando vídeo existente (ID: {video.id})")
+                    print(f"📹 Atualizando vídeo existente (ID: {Roteiro.id})")
                     for campo, valor in dados.items():
-                        if hasattr(video, campo):
-                            setattr(video, campo, valor)
+                        if hasattr(Roteiro, campo):
+                            setattr(Roteiro, campo, valor)
                             print(f"   📝 {campo}: {valor}")
                 else:
                     # Cria novo vídeo
                     print(f"📹 Criando novo registro de vídeo para roteiro {roteiro_id}")
-                    video = Video(roteiro_id=roteiro_id, **dados)
-                    session.add(video)
+                    Roteiro = Roteiro(roteiro_id=roteiro_id, **dados)
+                    session.add(Roteiro)
                     print(f"   📝 Campos: {list(dados.keys())}")
                 
                 session.commit()
@@ -79,8 +79,6 @@ class VideoManager:
                 import traceback
                 traceback.print_exc()
                 return False
-    
-    # --- MÉTODOS ESPECÍFICOS (agora são apenas wrappers do método genérico) ---
     
     def salvar_info_audio(self, 
                          roteiro_id: int, 
@@ -103,13 +101,13 @@ class VideoManager:
         dados = {k: v for k, v in dados.items() if v is not None}
         return self.salvar_info(roteiro_id, **dados)
     
-    def salvar_info_video(self,
+    def salvar_info_Roteiro(self,
                          roteiro_id: int,
-                         arquivo_video: str,
+                         arquivo_Roteiro: str,
                          duracao: int = None) -> bool:
         """Salva informações do vídeo renderizado"""
         dados = {
-            'arquivo_video': arquivo_video,
+            'arquivo_Roteiro': arquivo_Roteiro,
             'duracao': duracao
         }
         dados = {k: v for k, v in dados.items() if v is not None}
@@ -128,37 +126,37 @@ class VideoManager:
         """Atualiza métricas do vídeo"""
         return self.salvar_info(roteiro_id, visualizacao_total=visualizacao_total)
     
-    def get_all_videos(self):    
+    def get_all_Roteiros(self):    
         with get_session() as session:
-            stmt = select(Video).order_by(desc(Video.data_criacao))
-            videos = session.exec(stmt).all()               
-            for video in videos:
-                video.roteiro  
-                video.roteiro.canal_obj  
+            stmt = select(Roteiro).order_by(desc(Roteiro.data_criacao))
+            Roteiros = session.exec(stmt).all()               
+            for Roteiro in Roteiros:
+                Roteiro.roteiro  
+                Roteiro.roteiro.canal_obj  
             
-            return videos  
+            return Roteiros  
         
-    def get_video_by_roteiro(self, roteiro_id: int):
+    def get_Roteiro_by_roteiro(self, roteiro_id: int):
          with get_session() as session:
             # Carrega o vídeo JUNTAMENTE com o roteiro em uma única query
-            video = session.query(Video).options(
-                joinedload(Video.roteiro)
-            ).filter(Video.roteiro_id == roteiro_id).first()
+            Roteiro = session.query(Roteiro).options(
+                joinedload(Roteiro.roteiro)
+            ).filter(Roteiro.roteiro_id == roteiro_id).first()
             
-            return video
+            return Roteiro
          
-    def get_videos_by_roteiro(self, roteiro_id: int):
-        statement = select(Video).where(Video.roteiro_id == roteiro_id)
-        videos = self.session.exec(statement).all()
-        return videos
+    def get_Roteiros_by_roteiro(self, roteiro_id: int):
+        statement = select(Roteiro).where(Roteiro.roteiro_id == roteiro_id)
+        Roteiros = self.session.exec(statement).all()
+        return Roteiros
 
-    def update_video(self, video_id: int, data: dict):
+    def update_Roteiro(self, Roteiro_id: int, data: dict):
         """Atualiza dados do vídeo"""
-        video = self.session.get(Video, video_id)
-        if video:
+        Roteiro = self.session.get(Roteiro, Roteiro_id)
+        if Roteiro:
             for key, value in data.items():
-                if hasattr(video, key):
-                    setattr(video, key, value)
+                if hasattr(Roteiro, key):
+                    setattr(Roteiro, key, value)
             self.session.commit()
-            self.session.refresh(video)
-        return video
+            self.session.refresh(Roteiro)
+        return Roteiro
